@@ -31,6 +31,7 @@ Optional extras (install only what you use):
 | `leve[postgres]` | Postgres checkpointer + store (`langgraph-checkpoint-postgres`, `psycopg`) |
 | `leve[microsandbox]` | microVM sandbox adapter (`microsandbox`, needs the microsandbox server) |
 | `leve[discord]` | Discord channel adapter (`pynacl` for Ed25519 verification) |
+| `leve[google]` | Google Gemini models (`langchain-google-genai`; use `google_genai:<model>` strings) |
 
 ```bash
 uv sync --extra postgres --extra dev

@@ -10,12 +10,33 @@ descriptor be compiled with different checkpointers/stores per environment.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:  # avoid importing heavy langgraph/langchain types at module load
     from langchain_core.language_models import BaseChatModel
     from langgraph.checkpoint.base import BaseCheckpointSaver
     from langgraph.store.base import BaseStore
+
+# A summarization trigger/keep clause: ("fraction", 0.8) | ("tokens", N) | ("messages", N).
+TriggerClause = tuple[Literal["fraction", "tokens", "messages"], float]
+
+
+@dataclass(frozen=True)
+class CompactionConfig:
+    """Context-window summarization policy (SPEC §5.5).
+
+    When a thread approaches the model's context window, a summarization step
+    folds older turns into a running summary, bounding token cost. Maps to
+    LangChain's ``SummarizationMiddleware``.
+    """
+
+    enabled: bool = True
+    # Summarize when this clause is met; fraction is of the model's context window.
+    trigger: TriggerClause = ("fraction", 0.8)
+    # How much recent conversation to retain verbatim after summarizing.
+    keep: TriggerClause = ("messages", 20)
+    # Model used to write the summary; defaults to the agent's own model.
+    model: "str | BaseChatModel | None" = None
 
 
 @dataclass(frozen=True)
@@ -33,6 +54,8 @@ class AgentSpec:
     description: str = ""
     model_options: dict[str, Any] = field(default_factory=dict)
     recursion_limit: int = 25
+    # None means "auto" — a default CompactionConfig is applied at compile time.
+    compaction: "CompactionConfig | None" = None
     # Per-agent overrides; when ``None`` the project-level backend (leve.toml) is used.
     checkpointer: "BaseCheckpointSaver | None" = None
     store: "BaseStore | None" = None
@@ -45,6 +68,7 @@ def define_agent(
     description: str = "",
     model_options: "dict[str, Any] | None" = None,
     recursion_limit: int = 25,
+    compaction: "CompactionConfig | None" = None,
     checkpointer: "BaseCheckpointSaver | None" = None,
     store: "BaseStore | None" = None,
 ) -> AgentSpec:
@@ -61,6 +85,8 @@ def define_agent(
             the description of the auto-generated ``delegate_to_<name>`` tool.
         model_options: Extra model kwargs (``temperature``, ``max_tokens``, …).
         recursion_limit: LangGraph step ceiling per turn (guards runaway loops).
+        compaction: Context-window summarization policy; ``None`` enables a
+            sensible default (auto). Pass ``CompactionConfig(enabled=False)`` off.
         checkpointer: Override the project checkpointer for this agent.
         store: Override the project long-term-memory store for this agent.
     """
@@ -71,6 +97,7 @@ def define_agent(
         description=description,
         model_options=dict(model_options or {}),
         recursion_limit=recursion_limit,
+        compaction=compaction,
         checkpointer=checkpointer,
         store=store,
     )

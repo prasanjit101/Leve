@@ -20,12 +20,20 @@ dependencies = [
     "uvicorn[standard]>=0.34.0",
     "httpx>=0.28.1",
     "textual>=1.0.0",
+    # Skills frontmatter parsing.
+    "pyyaml>=6.0.2",
 ]
 
 [project.scripts]
 leve = "leve.cli:app"
 
 [project.optional-dependencies]
+# Production Postgres durability (checkpointer + store). Kept optional so the
+# core install stays light and psycopg is only built when needed.
+postgres = [
+    "langgraph-checkpoint-postgres>=2.0.0",
+    "psycopg[binary]>=3.2.0",
+]
 dev = [
     "pytest>=8.3.4",
     "pytest-asyncio>=0.25.2",

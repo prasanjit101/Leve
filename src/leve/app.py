@@ -17,6 +17,7 @@ from leve.graph import build_graph
 from leve.loader import LoadedAgent, load_project
 from leve.persistence import open_checkpointer, open_store
 from leve.session import AgentRuntime
+from leve.tracing import configure_tracing
 
 
 @asynccontextmanager
@@ -27,6 +28,7 @@ async def build_runtime(config: LeveConfig) -> AsyncIterator[AgentRuntime]:
     and compiles the agent graph against them.
     """
 
+    configure_tracing(config)
     loaded = load_project(config)
     async with AsyncExitStack() as stack:
         checkpointer = await stack.enter_async_context(open_checkpointer(config))
@@ -51,6 +53,7 @@ def inspect_project(config: LeveConfig) -> dict[str, Any]:
         "model": loaded.spec.model if isinstance(loaded.spec.model, str) else "<instance>",
         "instructions": bool(loaded.instructions.strip()),
         "tools": [tool.name for tool in loaded.tools],
+        "skills": [skill.name for skill in loaded.skills],
         "checkpointer": config.persistence.checkpointer,
         "store": config.persistence.store,
     }

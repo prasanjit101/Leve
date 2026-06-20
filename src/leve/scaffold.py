@@ -63,6 +63,14 @@ async def current_time(timezone_name: str = "UTC") -> str:
     return datetime.now(timezone.utc).isoformat()
 '''
 
+_EXAMPLE_SKILL = """\
+---
+description: House style for answering. Load before composing a user-facing reply.
+---
+Keep answers short and direct. Lead with the answer, then the reasoning.
+Prefer bullet points over paragraphs. Always name any tool you used.
+"""
+
 _GITIGNORE = """\
 .leve/
 __pycache__/
@@ -87,6 +95,7 @@ def scaffold_project(directory: Path, *, name: str, model: str) -> list[Path]:
         "agent/agent.py": _AGENT_PY.format(model=model),
         "agent/instructions.md": _INSTRUCTIONS_MD,
         "agent/tools/current_time.py": _EXAMPLE_TOOL,
+        "agent/skills/answering-style.md": _EXAMPLE_SKILL,
     }
 
     created: list[Path] = []

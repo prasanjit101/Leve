@@ -64,10 +64,30 @@ class AgentRuntime:
         *,
         context: LeveContext | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
-        """Resume a paused turn (approval/answer) and stream the continued events."""
+        """Resume a paused turn (approval/answer) and stream the continued events.
 
-        async for event in self._stream(Command(resume=value), session_id, context):
+        ``value`` may be a single decision (applied to a lone pending interrupt,
+        or broadcast to several), or an ``{interrupt_id: decision}`` map to answer
+        multiple pending interrupts individually (their ids arrive on the
+        ``approval.requested`` events).
+        """
+
+        pending = await self._pending_interrupts(self._config(session_id))
+        command = self._build_resume_command(value, pending)
+        async for event in self._stream(command, session_id, context):
             yield event
+
+    @staticmethod
+    def _build_resume_command(value: Any, pending: list[dict[str, Any]]) -> Command:
+        ids = [p["id"] for p in pending if p.get("id")]
+        if len(ids) <= 1:
+            # LangGraph accepts a bare resume value for a single pending interrupt.
+            return Command(resume=value)
+        if isinstance(value, dict) and set(value) >= set(ids):
+            return Command(resume=value)  # explicit per-interrupt decisions
+        # Convenience: broadcast one decision to every pending interrupt (LangGraph
+        # requires an id-keyed map once more than one is pending).
+        return Command(resume={interrupt_id: value for interrupt_id in ids})
 
     async def get_state(self, session_id: str) -> dict[str, Any]:
         """Return a JSON-friendly snapshot of the session from the checkpointer."""

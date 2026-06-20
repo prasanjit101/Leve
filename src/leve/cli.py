@@ -61,6 +61,7 @@ def build() -> None:
     typer.echo(f"  model:        {summary['model']}")
     typer.echo(f"  instructions: {'yes' if summary['instructions'] else 'none'}")
     typer.echo(f"  tools:        {', '.join(summary['tools']) or 'none'}")
+    typer.echo(f"  skills:       {', '.join(summary['skills']) or 'none'}")
     typer.echo(f"  checkpointer: {summary['checkpointer']}")
     typer.echo(f"  store:        {summary['store']}")
 

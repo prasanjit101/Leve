@@ -7,8 +7,8 @@ most projects import directly live here; everything else is reached through the
 convention described in ``SPEC.md``.
 """
 
-from leve.agent import AgentSpec, define_agent
+from leve.agent import AgentSpec, CompactionConfig, define_agent
 
-__all__ = ["AgentSpec", "define_agent", "__version__"]
+__all__ = ["AgentSpec", "CompactionConfig", "define_agent", "__version__"]
 
 __version__ = "0.1.0"

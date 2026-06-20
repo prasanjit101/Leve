@@ -22,6 +22,7 @@ from leve.agent import AgentSpec
 from leve.config import LeveConfig
 from leve.errors import LoaderError
 from leve.loader import discovery
+from leve.skills import SkillSpec, parse_skill
 from leve.tools import ToolSpec
 
 
@@ -34,6 +35,7 @@ class LoadedAgent:
     spec: AgentSpec
     instructions: str = ""
     tools: tuple[ToolSpec, ...] = field(default_factory=tuple)
+    skills: tuple[SkillSpec, ...] = field(default_factory=tuple)
 
 
 def load_agent(agent_dir: Path, config: LeveConfig) -> LoadedAgent:
@@ -67,12 +69,16 @@ def load_agent(agent_dir: Path, config: LeveConfig) -> LoadedAgent:
     # 3. tools/*.py → ToolSpec list.
     tools = _load_tools(root, config.project_dir, agent_dir / "tools")
 
+    # 4. skills/*.md frontmatter → load_skill catalog.
+    skills = _load_skills(agent_dir / "skills")
+
     return LoadedAgent(
         name=agent_dir.name,
         path=agent_dir,
         spec=spec,
         instructions=instructions,
         tools=tuple(tools),
+        skills=tuple(skills),
     )
 
 
@@ -99,6 +105,26 @@ def _load_tools(root: str, project_dir: Path, tools_dir: Path) -> list[ToolSpec]
             names.add(spec.name)
             tools.append(spec)
     return tools
+
+
+def _load_skills(skills_dir: Path) -> list[SkillSpec]:
+    skills: list[SkillSpec] = []
+    names: set[str] = set()
+    for file in _markdown_files(skills_dir):
+        skill = parse_skill(file)
+        if skill.name in names:
+            raise LoaderError(f"Duplicate skill name '{skill.name}' (in {file}).")
+        names.add(skill.name)
+        skills.append(skill)
+    return skills
+
+
+def _markdown_files(directory: Path) -> list[Path]:
+    if not directory.is_dir():
+        return []
+    return sorted(
+        p for p in directory.iterdir() if p.is_file() and p.suffix == ".md"
+    )
 
 
 __all__ = ["LoadedAgent", "load_agent", "load_project"]

@@ -18,10 +18,10 @@ from leve.errors import ConfigError
 
 CONFIG_FILENAME = "leve.toml"
 
-# Backends implemented in M1. Postgres/Redis land in M2 and extend these sets
+# Adapter names resolved in leve.persistence. New backends extend these sets
 # without changing the resolution code (Open/Closed).
-_CHECKPOINTER_KINDS = {"sqlite", "memory"}
-_STORE_KINDS = {"memory"}
+_CHECKPOINTER_KINDS = {"sqlite", "memory", "postgres"}
+_STORE_KINDS = {"memory", "postgres"}
 
 
 @dataclass(frozen=True)
@@ -32,6 +32,8 @@ class PersistenceConfig:
     store: str = "memory"
     # Local SQLite checkpoint file (used when checkpointer == "sqlite").
     sqlite_path: str = ".leve/checkpoints.sqlite"
+    # Postgres connection string (used when checkpointer/store == "postgres").
+    postgres_url: str | None = None
 
     def validate(self) -> None:
         if self.checkpointer not in _CHECKPOINTER_KINDS:
@@ -43,6 +45,19 @@ class PersistenceConfig:
             raise ConfigError(
                 f"Unknown store '{self.store}'. Supported: {sorted(_STORE_KINDS)}."
             )
+        if "postgres" in (self.checkpointer, self.store) and not self.postgres_url:
+            raise ConfigError(
+                "Postgres backend selected but no postgres_url is set "
+                "(leve.toml [persistence] postgres_url or env LEVE_POSTGRES_URL)."
+            )
+
+
+@dataclass(frozen=True)
+class TracingConfig:
+    """Observability backend selection (SPEC §5.4, §11)."""
+
+    provider: str = "langsmith"  # langsmith | otel | none
+    project: str | None = None
 
 
 @dataclass(frozen=True)
@@ -53,6 +68,7 @@ class LeveConfig:
     root: str = "agent"
     default_model: str = "anthropic:claude-opus-4-8"
     persistence: PersistenceConfig = field(default_factory=PersistenceConfig)
+    tracing: TracingConfig = field(default_factory=TracingConfig)
 
     @property
     def agent_dir(self) -> Path:
@@ -101,6 +117,7 @@ def _parse_config(path: Path) -> LeveConfig:
 
     agent = data.get("agent", {})
     persistence = data.get("persistence", {})
+    tracing = data.get("tracing", {})
 
     return LeveConfig(
         project_dir=path.parent.resolve(),
@@ -110,6 +127,11 @@ def _parse_config(path: Path) -> LeveConfig:
             checkpointer=persistence.get("checkpointer", PersistenceConfig.checkpointer),
             store=persistence.get("store", PersistenceConfig.store),
             sqlite_path=persistence.get("sqlite_path", PersistenceConfig.sqlite_path),
+            postgres_url=persistence.get("postgres_url", PersistenceConfig.postgres_url),
+        ),
+        tracing=TracingConfig(
+            provider=tracing.get("provider", TracingConfig.provider),
+            project=tracing.get("project", TracingConfig.project),
         ),
     )
 
@@ -122,6 +144,8 @@ def _apply_env_overrides(config: LeveConfig) -> LeveConfig:
         persistence = replace(persistence, checkpointer=ckpt)
     if (store := os.getenv("LEVE_STORE")) is not None:
         persistence = replace(persistence, store=store)
+    if (pg := os.getenv("LEVE_POSTGRES_URL")) is not None:
+        persistence = replace(persistence, postgres_url=pg)
 
     return replace(
         config,

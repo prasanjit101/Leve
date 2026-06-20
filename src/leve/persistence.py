@@ -42,6 +42,13 @@ async def open_checkpointer(config: LeveConfig) -> AsyncIterator[BaseCheckpointS
         async with AsyncSqliteSaver.from_conn_string(str(path)) as saver:
             await saver.setup()  # idempotent: creates checkpoint tables once
             yield saver
+    elif kind == "postgres":
+        AsyncPostgresSaver = _require_postgres("AsyncPostgresSaver")
+        async with AsyncPostgresSaver.from_conn_string(
+            _postgres_url(config)
+        ) as saver:
+            await saver.setup()
+            yield saver
     else:  # pragma: no cover - validate() rejects unknown kinds earlier
         raise ConfigError(f"Unsupported checkpointer backend '{kind}'.")
 
@@ -53,5 +60,35 @@ async def open_store(config: LeveConfig) -> AsyncIterator[BaseStore]:
     kind = config.persistence.store
     if kind == "memory":
         yield InMemoryStore()
+    elif kind == "postgres":
+        AsyncPostgresStore = _require_postgres("AsyncPostgresStore")
+        async with AsyncPostgresStore.from_conn_string(_postgres_url(config)) as store:
+            await store.setup()
+            yield store
     else:  # pragma: no cover - validate() rejects unknown kinds earlier
         raise ConfigError(f"Unsupported store backend '{kind}'.")
+
+
+def _postgres_url(config: LeveConfig) -> str:
+    url = config.persistence.postgres_url
+    if not url:  # pragma: no cover - validate() enforces this earlier
+        raise ConfigError("Postgres backend selected but postgres_url is unset.")
+    return url
+
+
+def _require_postgres(symbol: str):
+    """Import a Postgres backend class, with an actionable error if absent."""
+
+    try:
+        if symbol == "AsyncPostgresSaver":
+            from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
+            return AsyncPostgresSaver
+        from langgraph.store.postgres.aio import AsyncPostgresStore
+
+        return AsyncPostgresStore
+    except ImportError as exc:  # pragma: no cover - depends on optional extra
+        raise ConfigError(
+            "Postgres backend requires the optional dependency. Install with "
+            "`pip install 'leve[postgres]'`."
+        ) from exc

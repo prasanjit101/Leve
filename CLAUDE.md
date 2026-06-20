@@ -26,3 +26,8 @@ project name: Leve
 - Add comments where necessary for clarity, but avoid excessive commenting.
 - Structure code into smaller, modular files and follow best practices.
 - Do not repeat yourself; keep solutions simple.
+
+## Note
+
+- use the latest modules/libraries/Dependencies available.
+- use relevant skills when needed

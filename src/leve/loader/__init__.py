@@ -19,10 +19,12 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from leve.agent import AgentSpec
+from leve.channels import ChannelSpec
 from leve.config import LeveConfig
 from leve.connections import ConnectionSpec
 from leve.errors import LoaderError
 from leve.loader import discovery
+from leve.schedules import ScheduleSpec
 from leve.skills import SkillSpec, parse_skill
 from leve.tools import ToolSpec
 
@@ -38,6 +40,8 @@ class LoadedAgent:
     tools: tuple[ToolSpec, ...] = field(default_factory=tuple)
     skills: tuple[SkillSpec, ...] = field(default_factory=tuple)
     connections: tuple[ConnectionSpec, ...] = field(default_factory=tuple)
+    channels: tuple[ChannelSpec, ...] = field(default_factory=tuple)
+    schedules: tuple[ScheduleSpec, ...] = field(default_factory=tuple)
     subagents: tuple["LoadedAgent", ...] = field(default_factory=tuple)
 
 
@@ -87,7 +91,15 @@ def _load_dir(agent_dir: Path, root: str, config: LeveConfig) -> LoadedAgent:
     # 5. connections/*.py → MCP/OpenAPI connection specs (tools discovered at runtime).
     connections = _load_connections(root, config.project_dir, agent_dir / "connections")
 
-    # 6. subagents/<name>/ → recursively compiled subgraphs.
+    # 6. channels/*.py + schedules/*.py → external surfaces and timed runs.
+    channels = _collect_named(
+        root, config.project_dir, agent_dir / "channels", ChannelSpec, "channel"
+    )
+    schedules = _collect_typed(
+        root, config.project_dir, agent_dir / "schedules", ScheduleSpec, "schedule"
+    )
+
+    # 7. subagents/<name>/ → recursively compiled subgraphs.
     subagents = _load_subagents(agent_dir / "subagents", root, config)
 
     return LoadedAgent(
@@ -98,6 +110,8 @@ def _load_dir(agent_dir: Path, root: str, config: LeveConfig) -> LoadedAgent:
         tools=tuple(tools),
         skills=tuple(skills),
         connections=tuple(connections),
+        channels=tuple(channels),
+        schedules=tuple(schedules),
         subagents=tuple(subagents),
     )
 
@@ -152,18 +166,39 @@ def _load_skills(skills_dir: Path) -> list[SkillSpec]:
 def _load_connections(
     root: str, project_dir: Path, connections_dir: Path
 ) -> list[ConnectionSpec]:
-    connections: list[ConnectionSpec] = []
+    # The file name is the connection's namespace prefix (linear.<tool>).
+    return _collect_named(root, project_dir, connections_dir, ConnectionSpec, "connection")
+
+
+def _collect_named(root, project_dir, directory, type_, label):
+    """Collect frozen specs with a ``name`` field, set from the file stem."""
+
+    collected = []
     names: set[str] = set()
-    for file in discovery.python_files(connections_dir):
+    for file in discovery.python_files(directory):
         module = discovery.import_path(root, project_dir, file)
-        for spec in discovery.collect_instances(module, ConnectionSpec):
-            # The file name is the connection's namespace prefix (linear.<tool>).
+        for spec in discovery.collect_instances(module, type_):
             named = replace(spec, name=file.stem)
             if named.name in names:
-                raise LoaderError(f"Duplicate connection name '{named.name}'.")
+                raise LoaderError(f"Duplicate {label} name '{named.name}'.")
             names.add(named.name)
-            connections.append(named)
-    return connections
+            collected.append(named)
+    return collected
+
+
+def _collect_typed(root, project_dir, directory, type_, label):
+    """Collect specs that carry their own ``name`` (e.g. from a decorator)."""
+
+    collected = []
+    names: set[str] = set()
+    for file in discovery.python_files(directory):
+        module = discovery.import_path(root, project_dir, file)
+        for spec in discovery.collect_instances(module, type_):
+            if spec.name in names:
+                raise LoaderError(f"Duplicate {label} name '{spec.name}'.")
+            names.add(spec.name)
+            collected.append(spec)
+    return collected
 
 
 def _markdown_files(directory: Path) -> list[Path]:

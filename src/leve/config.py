@@ -104,6 +104,15 @@ class SandboxConfig:
 
 
 @dataclass(frozen=True)
+class DeployConfig:
+    """Deployment target (SPEC §10, §11)."""
+
+    target: str = "langgraph-platform"  # langgraph-platform | docker
+    # Public base URL of the served app (used in emitted crontab schedule calls).
+    base_url: str = "http://localhost:8000"
+
+
+@dataclass(frozen=True)
 class LeveConfig:
     """Resolved project configuration."""
 
@@ -113,6 +122,7 @@ class LeveConfig:
     persistence: PersistenceConfig = field(default_factory=PersistenceConfig)
     tracing: TracingConfig = field(default_factory=TracingConfig)
     sandbox: SandboxConfig = field(default_factory=SandboxConfig)
+    deploy: DeployConfig = field(default_factory=DeployConfig)
 
     @property
     def agent_dir(self) -> Path:
@@ -165,6 +175,7 @@ def _parse_config(path: Path) -> LeveConfig:
     tracing = data.get("tracing", {})
     sandbox = data.get("sandbox", {})
     limits = sandbox.get("limits", {})
+    deploy = data.get("deploy", {})
 
     return LeveConfig(
         project_dir=path.parent.resolve(),
@@ -191,6 +202,10 @@ def _parse_config(path: Path) -> LeveConfig:
                 network_allow=tuple(limits.get("network_allow", ())),
                 max_output_bytes=limits.get("max_output_bytes", SandboxLimits.max_output_bytes),
             ),
+        ),
+        deploy=DeployConfig(
+            target=deploy.get("target", DeployConfig.target),
+            base_url=deploy.get("base_url", DeployConfig.base_url),
         ),
     )
 

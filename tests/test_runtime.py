@@ -6,8 +6,19 @@ from datetime import date
 
 from langchain_core.messages import AIMessage, SystemMessage
 
+from leve.session import extract_reply
 from leve.testing import FakeChatModel
 from tests.conftest import collect, runtime_for
+
+
+def test_extract_reply_joins_stream_deltas():
+    events = [{"type": "model.delta", "text": "Hel"}, {"type": "model.delta", "text": "lo"}]
+    assert extract_reply(events) == "Hello"
+
+
+def test_extract_reply_prefers_full_message():
+    events = [{"type": "model.delta", "text": "x"}, {"type": "model.message", "text": "final"}]
+    assert extract_reply(events) == "final"
 
 
 async def test_simple_turn_emits_events(make_loaded):

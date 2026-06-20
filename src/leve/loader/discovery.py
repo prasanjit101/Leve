@@ -68,6 +68,29 @@ def import_path(root: str, project_dir: Path, path: Path) -> ModuleType:
         raise LoaderError(f"Failed to import {path}: {exc}") from exc
 
 
+def import_standalone(path: Path) -> ModuleType:
+    """Import a ``.py`` file under a unique synthetic name (no package namespace).
+
+    Used for eval files (``*.eval.py``), whose dotted names would otherwise be
+    mis-parsed as package paths. They import Leve via absolute imports and need
+    no relative imports into the agent tree.
+    """
+
+    import re
+
+    name = "_leve_standalone_" + re.sub(r"\W", "_", str(path.resolve()))
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:  # pragma: no cover - defensive
+        raise LoaderError(f"Could not load {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    try:
+        spec.loader.exec_module(module)
+    except Exception as exc:
+        raise LoaderError(f"Failed to import {path}: {exc}") from exc
+    return module
+
+
 def collect_instances(module: ModuleType, type_: type[T]) -> list[T]:
     """Return module-level instances of ``type_`` in definition order, de-duped."""
 

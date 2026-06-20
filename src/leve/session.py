@@ -155,6 +155,25 @@ class AgentRuntime:
         ]
 
 
+def extract_reply(events: list[dict[str, Any]]) -> str:
+    """Derive the assistant's final text from a turn's events.
+
+    A non-streaming model emits ``model.message``; a streaming provider emits
+    ``model.delta`` tokens (and the normalizer drops the duplicate message). Both
+    must yield a reply, so prefer the full message and fall back to joined deltas.
+    Shared by every consumer that needs the reply text (channels, schedules, evals).
+    """
+
+    final = ""
+    parts: list[str] = []
+    for event in events:
+        if event["type"] == "model.message":
+            final = event["text"]
+        elif event["type"] == "model.delta":
+            parts.append(event.get("text", ""))
+    return final or "".join(parts)
+
+
 def _serialize_message(message: BaseMessage) -> dict[str, Any]:
     """Reduce a LangChain message to a stable, JSON-friendly dict."""
 

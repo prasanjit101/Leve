@@ -11,7 +11,10 @@ emitted in-process, so HTTP adds no new event semantics — only transport.
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
+import logging
+import os
 from contextlib import asynccontextmanager, suppress
 from typing import Any, AsyncIterator, Callable
 
@@ -21,8 +24,12 @@ from pydantic import BaseModel, Field
 
 from leve.app import build_runtime
 from leve.config import LeveConfig
+from leve.errors import ConfigError
+from leve.loader import load_project
 from leve.runtime import LeveContext
-from leve.session import AgentRuntime
+from leve.session import AgentRuntime, extract_reply
+
+logger = logging.getLogger("leve.server")
 
 API_PREFIX = "/leve/v1"
 
@@ -76,6 +83,10 @@ class SessionManager:
         self._sessions: set[str] = set()
         self._brokers: dict[str, SessionBroker] = {}
         self._tasks: dict[str, asyncio.Task] = {}
+        # Channel turns run in the background (fast webhook ack) and serialize
+        # per session_key so retries / concurrent messages don't race a thread.
+        self._channel_tasks: set[asyncio.Task] = set()
+        self._locks: dict[str, asyncio.Lock] = {}
 
     def create(self) -> str:
         session_id = self.runtime.new_session_id()
@@ -116,10 +127,39 @@ class SessionManager:
         self._tasks[session_id] = asyncio.create_task(runner())
         return broker
 
+    def spawn_channel_turn(self, adapter, incoming) -> asyncio.Task:
+        """Run a channel turn in the background and deliver the reply."""
+
+        task = asyncio.create_task(self.run_channel_turn(adapter, incoming))
+        self._channel_tasks.add(task)
+        task.add_done_callback(self._channel_tasks.discard)
+        return task
+
+    async def run_channel_turn(self, adapter, incoming) -> None:
+        """Drive a turn for a channel message (serialized per session) and deliver."""
+
+        lock = self._locks.setdefault(incoming.session_key, asyncio.Lock())
+        async with lock:
+            events = [
+                event
+                async for event in self.runtime.run(incoming.session_key, incoming.text)
+            ]
+        if any(e["type"] == "error" for e in events):
+            logger.warning("Channel turn errored for %s", incoming.session_key)
+            return
+        reply = extract_reply(events)
+        if not reply:
+            return
+        try:
+            await adapter.deliver(incoming.target, reply)
+        except Exception:  # delivery is best-effort; never fail the webhook
+            logger.exception("Channel delivery failed for %s", incoming.session_key)
+
     async def shutdown(self) -> None:
-        for task in self._tasks.values():
+        tasks = list(self._tasks.values()) + list(self._channel_tasks)
+        for task in tasks:
             task.cancel()
-        for task in self._tasks.values():
+        for task in tasks:
             with suppress(asyncio.CancelledError, Exception):
                 await task
 
@@ -215,7 +255,79 @@ def create_app(config: LeveConfig) -> FastAPI:
         _require_session(manager, session_id)
         return await manager.runtime.get_state(session_id)
 
+    # Channels (inbound webhooks) and schedules (timed runs). Names are known at
+    # load time, so routes are registered up front; handlers use the live runtime.
+    _register_surfaces(app, load_project(config))
     return app
+
+
+def _register_surfaces(app: FastAPI, loaded) -> None:
+    from leve.schedules import run_schedule
+
+    for channel in loaded.channels:
+        _register_channel(app, channel.name, channel.adapter)
+    for schedule in loaded.schedules:
+        _register_schedule(app, schedule, run_schedule)
+
+
+def _register_channel(app: FastAPI, name: str, adapter) -> None:
+    @app.post(f"{API_PREFIX}/channels/{name}/events")
+    async def channel_events(request: Request) -> Any:
+        raw = await request.body()
+
+        # Verify on raw bytes first, so unauthenticated callers never reach the
+        # parser. A missing optional dep (e.g. Discord's PyNaCl) → 503, not 500.
+        try:
+            verified = adapter.verify(request.headers, raw)
+        except ConfigError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        if not verified:
+            raise HTTPException(status_code=401, detail="Invalid channel signature.")
+
+        try:
+            payload = json.loads(raw) if raw else {}
+        except json.JSONDecodeError as exc:
+            raise HTTPException(status_code=400, detail="Invalid JSON body.") from exc
+
+        handshake = adapter.handshake_response(payload)
+        if handshake is not None:
+            return handshake
+
+        # Drop provider retries (we ack fast below; retries would duplicate runs).
+        if adapter.is_retry(request.headers):
+            return {"ok": True}
+
+        incoming = adapter.parse(payload)
+        if incoming is None:
+            return {"ok": True}
+
+        # Ack immediately (within the provider's deadline); run the turn in the
+        # background and deliver the reply when it completes.
+        _manager(request).spawn_channel_turn(adapter, incoming)
+        return {"ok": True}
+
+
+def _register_schedule(app: FastAPI, schedule, run_schedule) -> None:
+    @app.post(f"{API_PREFIX}/schedules/{schedule.name}/run")
+    async def schedule_run(request: Request) -> dict[str, bool]:
+        _verify_schedule_secret(request)
+        await run_schedule(schedule, _manager(request).runtime)
+        return {"ok": True}
+
+
+def _verify_schedule_secret(request: Request) -> None:
+    """Require a shared secret on the schedule trigger when one is configured.
+
+    The endpoint drives a real agent run, so it must not be openly triggerable.
+    With no ``LEVE_SCHEDULE_SECRET`` set, the route stays open for local dev.
+    """
+
+    secret = os.environ.get("LEVE_SCHEDULE_SECRET")
+    if not secret:
+        return
+    provided = request.headers.get("x-leve-schedule-secret", "")
+    if not hmac.compare_digest(provided, secret):
+        raise HTTPException(status_code=401, detail="Invalid schedule secret.")
 
 
 async def _empty() -> AsyncIterator[dict[str, Any]]:

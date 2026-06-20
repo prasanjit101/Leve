@@ -79,6 +79,56 @@ __pycache__/
 """
 
 
+_SLACK_CHANNEL = '''\
+from leve.channels import define_channel
+from leve.channels.slack import slack_adapter
+
+channel = define_channel(slack_adapter(signing_secret_env="SLACK_SIGNING_SECRET"))
+'''
+
+_DISCORD_CHANNEL = '''\
+from leve.channels import define_channel
+from leve.channels.discord import discord_adapter
+
+channel = define_channel(discord_adapter(public_key_env="DISCORD_PUBLIC_KEY"))
+'''
+
+_MCP_CONNECTION = '''\
+from leve.connections import define_mcp_connection
+
+connection = define_mcp_connection(
+    url="https://mcp.example.com/sse",
+    transport="sse",
+    description="Describe what this connection exposes.",
+)
+'''
+
+_CHANNEL_TEMPLATES = {"slack": _SLACK_CHANNEL, "discord": _DISCORD_CHANNEL}
+
+
+def scaffold_channel(agent_dir: Path, kind: str) -> Path:
+    """Write ``agent/channels/<kind>.py`` from a built-in template."""
+
+    template = _CHANNEL_TEMPLATES.get(kind)
+    if template is None:
+        raise LeveError(f"Unknown channel '{kind}'. Available: {sorted(_CHANNEL_TEMPLATES)}.")
+    return _write_component(agent_dir / "channels" / f"{kind}.py", template)
+
+
+def scaffold_connection(agent_dir: Path, name: str) -> Path:
+    """Write ``agent/connections/<name>.py`` MCP connection stub."""
+
+    return _write_component(agent_dir / "connections" / f"{name}.py", _MCP_CONNECTION)
+
+
+def _write_component(path: Path, content: str) -> Path:
+    if path.exists():
+        raise LeveError(f"{path} already exists.")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
 def scaffold_project(directory: Path, *, name: str, model: str) -> list[Path]:
     """Write a runnable starter project into ``directory``.
 

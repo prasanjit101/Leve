@@ -70,6 +70,93 @@ def build() -> None:
 
 
 @app.command()
+def eval() -> None:
+    """Run the project's eval suites; exit non-zero if any fail (CI gate)."""
+
+    import asyncio
+
+    from leve.app import run_evals
+
+    try:
+        results = asyncio.run(run_evals(load_config()))
+    except LeveError as exc:
+        typer.secho(f"Eval run failed: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1) from exc
+
+    if not results:
+        typer.secho("No evals found (evals/*.eval.py).", fg=typer.colors.YELLOW)
+        return
+
+    failed = 0
+    for result in results:
+        if result.passed:
+            typer.secho(f"  ✓ {result.name}", fg=typer.colors.GREEN)
+        else:
+            failed += 1
+            typer.secho(f"  ✗ {result.name}: {result.error}", fg=typer.colors.RED)
+
+    passed = len(results) - failed
+    typer.echo(f"\n{passed} passed, {failed} failed")
+    if failed:
+        raise typer.Exit(1)
+
+
+channels_app = typer.Typer(help="Manage channel adapters.")
+connections_app = typer.Typer(help="Manage connections.")
+app.add_typer(channels_app, name="channels")
+app.add_typer(connections_app, name="connections")
+
+
+@channels_app.command("add")
+def channels_add(kind: str = typer.Argument(..., help="slack | discord")) -> None:
+    """Scaffold a channel adapter file."""
+
+    from leve.scaffold import scaffold_channel
+
+    _scaffold(lambda: scaffold_channel(load_config().agent_dir, kind))
+
+
+@connections_app.command("add")
+def connections_add(name: str = typer.Argument(..., help="Connection name.")) -> None:
+    """Scaffold an MCP/OpenAPI connection with an auth stub."""
+
+    from leve.scaffold import scaffold_connection
+
+    _scaffold(lambda: scaffold_connection(load_config().agent_dir, name))
+
+
+def _scaffold(action) -> None:
+    try:
+        path = action()
+    except LeveError as exc:
+        typer.secho(str(exc), fg=typer.colors.RED, err=True)
+        raise typer.Exit(1) from exc
+    typer.secho(f"Created {path}", fg=typer.colors.GREEN)
+
+
+@app.command()
+def deploy() -> None:
+    """Emit deployment artifacts (langgraph.json, Dockerfile, crontab)."""
+
+    from leve.deploy import write_deploy_artifacts
+    from leve.loader import load_project
+
+    try:
+        config = load_config()
+        written, warnings = write_deploy_artifacts(config, load_project(config))
+    except LeveError as exc:
+        typer.secho(f"Deploy failed: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1) from exc
+
+    typer.secho(f"Emitted deployment artifacts (target: {config.deploy.target}):",
+                fg=typer.colors.GREEN)
+    for path in written:
+        typer.echo(f"  {path.relative_to(config.project_dir)}")
+    for warning in warnings:
+        typer.secho(f"  ! {warning}", fg=typer.colors.YELLOW)
+
+
+@app.command()
 def dev(
     host: str = typer.Option("127.0.0.1", help="Bind host."),
     port: int = typer.Option(8000, help="Bind port."),

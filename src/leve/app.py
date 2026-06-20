@@ -16,8 +16,9 @@ from langchain_core.tools import BaseTool
 
 from leve.config import LeveConfig
 from leve.connections import discover_tools
+from leve.evals import EvalResult, EvalSpec, run_eval
 from leve.graph import build_graph
-from leve.loader import LoadedAgent, load_project
+from leve.loader import LoadedAgent, discovery, load_project
 from leve.persistence import open_checkpointer, open_store
 from leve.sandbox import create_sandbox, make_sandbox_tools
 from leve.session import AgentRuntime
@@ -99,3 +100,26 @@ def inspect_project(config: LeveConfig) -> dict[str, Any]:
         "checkpointer": config.persistence.checkpointer,
         "store": config.persistence.store,
     }
+
+
+def load_evals(config: LeveConfig) -> tuple[EvalSpec, ...]:
+    """Discover ``evals/*.eval.py`` at the project root (SPEC §7)."""
+
+    evals_dir = config.project_dir / "evals"
+    if not evals_dir.is_dir():
+        return ()
+    specs: list[EvalSpec] = []
+    for file in sorted(evals_dir.glob("*.eval.py")):
+        module = discovery.import_standalone(file)
+        specs.extend(discovery.collect_instances(module, EvalSpec))
+    return tuple(specs)
+
+
+async def run_evals(config: LeveConfig) -> list[EvalResult]:
+    """Run every eval against a fresh runtime (isolated model state + threads)."""
+
+    results: list[EvalResult] = []
+    for spec in load_evals(config):
+        async with build_runtime(config) as runtime:
+            results.append(await run_eval(spec, runtime))
+    return results

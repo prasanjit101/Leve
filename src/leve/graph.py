@@ -15,6 +15,8 @@ each milestone extends without changing this assembly's shape:
 
 from __future__ import annotations
 
+from typing import Callable
+
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
     AgentMiddleware,
@@ -26,6 +28,8 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.store.base import BaseStore
 
+from langchain_core.tools import BaseTool
+
 from leve.agent import CompactionConfig
 from leve.instructions import make_prompt_middleware
 from leve.loader import LoadedAgent
@@ -33,6 +37,14 @@ from leve.middleware import ApprovalMiddleware
 from leve.models import build_model
 from leve.runtime import LeveContext
 from leve.skills import make_load_skill_tool
+from leve.subagents import make_delegation_tool
+
+
+# Resolves the runtime-discovered tools (connection + sandbox tools) for a given
+# agent node. Supplied by the async app layer, since discovery is async and the
+# sync graph builder cannot do it. Threaded through the subagent recursion so a
+# subagent's connections/sandbox reach its subgraph too (not just the root).
+ExtraToolsResolver = Callable[[LoadedAgent], list[BaseTool]]
 
 
 def build_graph(
@@ -40,17 +52,29 @@ def build_graph(
     *,
     checkpointer: BaseCheckpointSaver | None = None,
     store: BaseStore | None = None,
+    extra_tools_for: ExtraToolsResolver | None = None,
 ) -> CompiledStateGraph:
-    """Compile a loaded agent into a runnable graph.
+    """Compile a loaded agent (and its subagents) into a runnable graph.
 
     A per-agent ``checkpointer``/``store`` set on the descriptor (SPEC §4.1)
-    overrides the project-level backend passed in here.
+    overrides the project-level backend passed in here. ``extra_tools_for`` maps
+    each agent node to its runtime-discovered tools; it is applied to the root
+    *and* recursively to every subagent so declared connections/sandbox compose.
     """
 
+    resolve = extra_tools_for or (lambda _agent: [])
+    resolved_checkpointer = loaded.spec.checkpointer or checkpointer
+    resolved_store = loaded.spec.store or store
+
     model = build_model(loaded.spec)
-    tools = [tool.build() for tool in loaded.tools]
+    tools: list[BaseTool] = [tool.build() for tool in loaded.tools]
     if loaded.skills:
         tools.append(make_load_skill_tool(loaded.skills))
+    tools.extend(
+        _build_subagent_tools(loaded, resolved_checkpointer, resolved_store, resolve)
+    )
+    tools.extend(resolve(loaded))
+
     middleware = _build_middleware(loaded, model)
 
     return create_agent(
@@ -58,10 +82,37 @@ def build_graph(
         tools=tools,
         middleware=middleware,
         context_schema=LeveContext,
-        checkpointer=loaded.spec.checkpointer or checkpointer,
-        store=loaded.spec.store or store,
+        checkpointer=resolved_checkpointer,
+        store=resolved_store,
         name=loaded.name,
     )
+
+
+def _build_subagent_tools(
+    loaded: LoadedAgent,
+    checkpointer: BaseCheckpointSaver | None,
+    store: BaseStore | None,
+    extra_tools_for: ExtraToolsResolver,
+) -> list[BaseTool]:
+    """Compile each subagent into a subgraph and wrap it as a delegation tool."""
+
+    tools: list[BaseTool] = []
+    for sub in loaded.subagents:
+        subgraph = build_graph(
+            sub,
+            checkpointer=checkpointer,
+            store=store,
+            extra_tools_for=extra_tools_for,
+        )
+        tools.append(
+            make_delegation_tool(
+                sub.name,
+                sub.spec.description,
+                subgraph,
+                recursion_limit=sub.spec.recursion_limit,
+            )
+        )
+    return tools
 
 
 def _build_middleware(loaded: LoadedAgent, model) -> list[AgentMiddleware]:

@@ -62,6 +62,9 @@ def build() -> None:
     typer.echo(f"  instructions: {'yes' if summary['instructions'] else 'none'}")
     typer.echo(f"  tools:        {', '.join(summary['tools']) or 'none'}")
     typer.echo(f"  skills:       {', '.join(summary['skills']) or 'none'}")
+    typer.echo(f"  connections:  {', '.join(summary['connections']) or 'none'}")
+    typer.echo(f"  subagents:    {', '.join(summary['subagents']) or 'none'}")
+    typer.echo(f"  sandbox:      {summary['sandbox'] or 'off'}")
     typer.echo(f"  checkpointer: {summary['checkpointer']}")
     typer.echo(f"  store:        {summary['store']}")
 

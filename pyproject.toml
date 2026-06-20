@@ -22,6 +22,8 @@ dependencies = [
     "textual>=1.0.0",
     # Skills frontmatter parsing.
     "pyyaml>=6.0.2",
+    # MCP connections (remote tool discovery).
+    "langchain-mcp-adapters>=0.1.0",
 ]
 
 [project.scripts]
@@ -33,6 +35,10 @@ leve = "leve.cli:app"
 postgres = [
     "langgraph-checkpoint-postgres>=2.0.0",
     "psycopg[binary]>=3.2.0",
+]
+# Default production sandbox (microVM isolation). Requires the microsandbox server.
+microsandbox = [
+    "microsandbox>=0.1.0",
 ]
 dev = [
     "pytest>=8.3.4",

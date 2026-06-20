@@ -56,6 +56,8 @@ class AgentSpec:
     recursion_limit: int = 25
     # None means "auto" — a default CompactionConfig is applied at compile time.
     compaction: "CompactionConfig | None" = None
+    # Opt-in: inject sandbox tools (run untrusted code) using the project adapter.
+    sandbox: bool = False
     # Per-agent overrides; when ``None`` the project-level backend (leve.toml) is used.
     checkpointer: "BaseCheckpointSaver | None" = None
     store: "BaseStore | None" = None
@@ -69,6 +71,7 @@ def define_agent(
     model_options: "dict[str, Any] | None" = None,
     recursion_limit: int = 25,
     compaction: "CompactionConfig | None" = None,
+    sandbox: bool = False,
     checkpointer: "BaseCheckpointSaver | None" = None,
     store: "BaseStore | None" = None,
 ) -> AgentSpec:
@@ -87,6 +90,8 @@ def define_agent(
         recursion_limit: LangGraph step ceiling per turn (guards runaway loops).
         compaction: Context-window summarization policy; ``None`` enables a
             sensible default (auto). Pass ``CompactionConfig(enabled=False)`` off.
+        sandbox: When True, inject sandbox tools (run untrusted code/shell) using
+            the project's configured sandbox adapter. Off by default.
         checkpointer: Override the project checkpointer for this agent.
         store: Override the project long-term-memory store for this agent.
     """
@@ -98,6 +103,7 @@ def define_agent(
         model_options=dict(model_options or {}),
         recursion_limit=recursion_limit,
         compaction=compaction,
+        sandbox=sandbox,
         checkpointer=checkpointer,
         store=store,
     )

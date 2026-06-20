@@ -12,10 +12,14 @@ from __future__ import annotations
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any, AsyncIterator
 
+from langchain_core.tools import BaseTool
+
 from leve.config import LeveConfig
+from leve.connections import discover_tools
 from leve.graph import build_graph
 from leve.loader import LoadedAgent, load_project
 from leve.persistence import open_checkpointer, open_store
+from leve.sandbox import create_sandbox, make_sandbox_tools
 from leve.session import AgentRuntime
 from leve.tracing import configure_tracing
 
@@ -33,8 +37,43 @@ async def build_runtime(config: LeveConfig) -> AsyncIterator[AgentRuntime]:
     async with AsyncExitStack() as stack:
         checkpointer = await stack.enter_async_context(open_checkpointer(config))
         store = await stack.enter_async_context(open_store(config))
-        graph = build_graph(loaded, checkpointer=checkpointer, store=store)
+
+        # Resolve runtime tools (connections + sandbox) for every agent in the
+        # tree — root and subagents alike — so declared capabilities compose.
+        extra_tools = await _resolve_extra_tools(loaded, config, stack)
+        graph = build_graph(
+            loaded,
+            checkpointer=checkpointer,
+            store=store,
+            extra_tools_for=lambda agent: extra_tools.get(id(agent), []),
+        )
         yield AgentRuntime(graph, loaded)
+
+
+async def _resolve_extra_tools(
+    loaded: LoadedAgent, config: LeveConfig, stack: AsyncExitStack
+) -> dict[int, list[BaseTool]]:
+    """Discover connection + sandbox tools for every node in the agent tree.
+
+    Done in the async app layer (discovery is async; sandboxes are resources
+    closed on shutdown) and keyed by node identity so the sync graph builder can
+    look each agent's tools up while recursing.
+    """
+
+    mapping: dict[int, list[BaseTool]] = {}
+
+    async def walk(node: LoadedAgent) -> None:
+        tools: list[BaseTool] = list(await discover_tools(node.connections))
+        if node.spec.sandbox:
+            sandbox = create_sandbox(config.sandbox)
+            stack.push_async_callback(sandbox.close)
+            tools.extend(make_sandbox_tools(sandbox))
+        mapping[id(node)] = tools
+        for sub in node.subagents:
+            await walk(sub)
+
+    await walk(loaded)
+    return mapping
 
 
 def inspect_project(config: LeveConfig) -> dict[str, Any]:
@@ -54,6 +93,9 @@ def inspect_project(config: LeveConfig) -> dict[str, Any]:
         "instructions": bool(loaded.instructions.strip()),
         "tools": [tool.name for tool in loaded.tools],
         "skills": [skill.name for skill in loaded.skills],
+        "connections": [c.name for c in loaded.connections],
+        "subagents": [s.name for s in loaded.subagents],
+        "sandbox": config.sandbox.adapter if loaded.spec.sandbox else None,
         "checkpointer": config.persistence.checkpointer,
         "store": config.persistence.store,
     }

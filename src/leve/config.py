@@ -60,6 +60,49 @@ class TracingConfig:
     project: str | None = None
 
 
+# Sandbox adapters by isolation tier (SPEC §5.2). microsandbox is the default;
+# subprocess is the no-isolation dev escape hatch.
+_SANDBOX_ADAPTERS = {"microsandbox", "subprocess", "os_native", "docker", "e2b", "modal"}
+
+
+@dataclass(frozen=True)
+class SandboxLimits:
+    """Resource quotas for untrusted agent code (SPEC §5.2, §11).
+
+    Secure defaults: 1 vCPU / 1 GB RAM / 1 GB disk / 120 s per command, egress
+    denied. An agent may tighten these but the project ceiling is enforced here.
+    """
+
+    memory_mb: int = 1024
+    vcpus: int = 1
+    timeout_sec: int = 120
+    disk_mb: int = 1024
+    network: str = "deny"  # deny | allow
+    network_allow: tuple[str, ...] = ()
+    # Cap captured command output so a runaway command can't flood the model
+    # context or bloat the checkpointer. Output beyond this is truncated.
+    max_output_bytes: int = 256 * 1024
+
+
+@dataclass(frozen=True)
+class SandboxConfig:
+    """Sandbox adapter selection and quotas."""
+
+    adapter: str = "microsandbox"
+    limits: SandboxLimits = field(default_factory=SandboxLimits)
+
+    def validate(self) -> None:
+        if self.adapter not in _SANDBOX_ADAPTERS:
+            raise ConfigError(
+                f"Unknown sandbox adapter '{self.adapter}'. "
+                f"Supported: {sorted(_SANDBOX_ADAPTERS)}."
+            )
+        if self.limits.network not in {"deny", "allow"}:
+            raise ConfigError(
+                f"sandbox network must be 'deny' or 'allow', got '{self.limits.network}'."
+            )
+
+
 @dataclass(frozen=True)
 class LeveConfig:
     """Resolved project configuration."""
@@ -69,6 +112,7 @@ class LeveConfig:
     default_model: str = "anthropic:claude-opus-4-8"
     persistence: PersistenceConfig = field(default_factory=PersistenceConfig)
     tracing: TracingConfig = field(default_factory=TracingConfig)
+    sandbox: SandboxConfig = field(default_factory=SandboxConfig)
 
     @property
     def agent_dir(self) -> Path:
@@ -105,6 +149,7 @@ def load_config(start_dir: Path | str | None = None) -> LeveConfig:
 
     config = _apply_env_overrides(config)
     config.persistence.validate()
+    config.sandbox.validate()
     return config
 
 
@@ -118,6 +163,8 @@ def _parse_config(path: Path) -> LeveConfig:
     agent = data.get("agent", {})
     persistence = data.get("persistence", {})
     tracing = data.get("tracing", {})
+    sandbox = data.get("sandbox", {})
+    limits = sandbox.get("limits", {})
 
     return LeveConfig(
         project_dir=path.parent.resolve(),
@@ -132,6 +179,18 @@ def _parse_config(path: Path) -> LeveConfig:
         tracing=TracingConfig(
             provider=tracing.get("provider", TracingConfig.provider),
             project=tracing.get("project", TracingConfig.project),
+        ),
+        sandbox=SandboxConfig(
+            adapter=sandbox.get("adapter", SandboxConfig.adapter),
+            limits=SandboxLimits(
+                memory_mb=limits.get("memory_mb", SandboxLimits.memory_mb),
+                vcpus=limits.get("vcpus", SandboxLimits.vcpus),
+                timeout_sec=limits.get("timeout_sec", SandboxLimits.timeout_sec),
+                disk_mb=limits.get("disk_mb", SandboxLimits.disk_mb),
+                network=limits.get("network", SandboxLimits.network),
+                network_allow=tuple(limits.get("network_allow", ())),
+                max_output_bytes=limits.get("max_output_bytes", SandboxLimits.max_output_bytes),
+            ),
         ),
     )
 

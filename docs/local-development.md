@@ -121,7 +121,8 @@ default_model = "anthropic:claude-opus-4-8"
 
 [persistence]
 checkpointer = "sqlite"          # sqlite | memory | postgres
-store = "memory"                 # memory | postgres
+store = "memory"                 # sqlite | memory | postgres
+# store_sqlite_path = ".leve/store.sqlite"   # used when store = "sqlite"
 
 [credentials]
 broker = "oauth_store"           # static | oauth_store | token_exchange

@@ -17,8 +17,8 @@ root = "agent"
 default_model = "anthropic:claude-opus-4-8"
 
 [persistence]
-checkpointer = "postgres"        # durable, survives restarts/redeploys
-store = "postgres"               # long-term memory
+checkpointer = "postgres"        # sqlite | memory | postgres
+store = "postgres"               # sqlite | memory | postgres — long-term memory
 postgres_url = "postgresql://user:pass@host:5432/leve"
 
 [credentials]
@@ -44,6 +44,10 @@ project = "myagent-prod"
 target = "langgraph-platform"    # langgraph-platform | docker
 base_url = "https://myagent.example.com"   # used in emitted schedule crontab
 ```
+
+For a single-node self-host deploy, `checkpointer`/`store` may both be `sqlite`
+(file-backed, durable across restarts but not shared across replicas) — Postgres
+is required only for multi-replica or autoscaled deployments.
 
 Install the matching extras on the production image:
 

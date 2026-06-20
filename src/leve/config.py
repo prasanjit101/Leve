@@ -21,7 +21,7 @@ CONFIG_FILENAME = "leve.toml"
 # Adapter names resolved in leve.persistence. New backends extend these sets
 # without changing the resolution code (Open/Closed).
 _CHECKPOINTER_KINDS = {"sqlite", "memory", "postgres"}
-_STORE_KINDS = {"memory", "postgres"}
+_STORE_KINDS = {"sqlite", "memory", "postgres"}
 
 
 @dataclass(frozen=True)
@@ -32,6 +32,9 @@ class PersistenceConfig:
     store: str = "memory"
     # Local SQLite checkpoint file (used when checkpointer == "sqlite").
     sqlite_path: str = ".leve/checkpoints.sqlite"
+    # Local SQLite long-term-memory file (used when store == "sqlite"). Kept
+    # separate from the checkpoint DB so durability and memory don't share a file.
+    store_sqlite_path: str = ".leve/store.sqlite"
     # Postgres connection string (used when checkpointer/store == "postgres").
     postgres_url: str | None = None
 
@@ -194,6 +197,9 @@ def _parse_config(path: Path) -> LeveConfig:
             checkpointer=persistence.get("checkpointer", PersistenceConfig.checkpointer),
             store=persistence.get("store", PersistenceConfig.store),
             sqlite_path=persistence.get("sqlite_path", PersistenceConfig.sqlite_path),
+            store_sqlite_path=persistence.get(
+                "store_sqlite_path", PersistenceConfig.store_sqlite_path
+            ),
             postgres_url=persistence.get("postgres_url", PersistenceConfig.postgres_url),
         ),
         tracing=TracingConfig(

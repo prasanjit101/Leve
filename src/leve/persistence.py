@@ -60,6 +60,14 @@ async def open_store(config: LeveConfig) -> AsyncIterator[BaseStore]:
     kind = config.persistence.store
     if kind == "memory":
         yield InMemoryStore()
+    elif kind == "sqlite":
+        from langgraph.store.sqlite.aio import AsyncSqliteStore
+
+        path = config.project_dir / config.persistence.store_sqlite_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        async with AsyncSqliteStore.from_conn_string(str(path)) as store:
+            await store.setup()  # idempotent: creates store tables once
+            yield store
     elif kind == "postgres":
         AsyncPostgresStore = _require_postgres("AsyncPostgresStore")
         async with AsyncPostgresStore.from_conn_string(_postgres_url(config)) as store:

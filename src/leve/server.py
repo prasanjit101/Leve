@@ -23,6 +23,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from leve.app import build_runtime
+from leve.auth import anonymous, with_broker
 from leve.config import LeveConfig
 from leve.errors import ConfigError
 from leve.loader import load_project
@@ -138,11 +139,15 @@ class SessionManager:
     async def run_channel_turn(self, adapter, incoming) -> None:
         """Drive a turn for a channel message (serialized per session) and deliver."""
 
+        principal = with_broker(incoming.principal, self.runtime.broker)
+        context = LeveContext(principal=principal)
         lock = self._locks.setdefault(incoming.session_key, asyncio.Lock())
         async with lock:
             events = [
                 event
-                async for event in self.runtime.run(incoming.session_key, incoming.text)
+                async for event in self.runtime.run(
+                    incoming.session_key, incoming.text, context=context
+                )
             ]
         if any(e["type"] == "error" for e in events):
             logger.warning("Channel turn errored for %s", incoming.session_key)
@@ -218,7 +223,13 @@ def create_app(config: LeveConfig) -> FastAPI:
         manager = _manager(request)
         _require_session(manager, session_id)
         _require_idle(manager, session_id)
-        context = LeveContext(template_vars=body.template_vars, metadata=body.metadata)
+        # HTTP callers are anonymous by default (Platform Auth / a custom resolver
+        # supplies a real principal); attach the broker so credential() works.
+        context = LeveContext(
+            template_vars=body.template_vars,
+            metadata=body.metadata,
+            principal=with_broker(anonymous(), manager.runtime.broker),
+        )
         broker = manager.start(
             session_id,
             lambda: manager.runtime.run(session_id, body.message, context=context),
@@ -232,9 +243,12 @@ def create_app(config: LeveConfig) -> FastAPI:
         manager = _manager(request)
         _require_session(manager, session_id)
         _require_idle(manager, session_id)
+        # Re-supply the caller principal on resume (runtime context isn't
+        # checkpointed): without it a resumed/consent turn would lose identity.
+        context = LeveContext(principal=with_broker(anonymous(), manager.runtime.broker))
         broker = manager.start(
             session_id,
-            lambda: manager.runtime.resume(session_id, body.value),
+            lambda: manager.runtime.resume(session_id, body.value, context=context),
         )
         return StreamingResponse(_sse(broker.subscribe()), media_type="text/event-stream")
 

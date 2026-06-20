@@ -12,6 +12,7 @@ namespacing work; a connection with a static token resolves it here.
 
 from __future__ import annotations
 
+import inspect
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -103,7 +104,10 @@ async def _discover_mcp(spec: ConnectionSpec, principal: Any) -> list[BaseTool]:
         "transport": spec.config["transport"],
         "url": spec.config["url"],
     }
-    headers = _resolve_headers(spec.auth, principal)
+    # MCP clients bind headers at discovery (build) time, so per-caller MCP tokens
+    # are a known limitation: at build there is no caller, and we fail closed
+    # rather than bake a shared per-user token. Shared/static tokens still work.
+    headers = await _resolve_headers_safe(spec.auth, principal)
     if headers:
         connection["headers"] = headers
 
@@ -115,28 +119,59 @@ async def _discover_mcp(spec: ConnectionSpec, principal: Any) -> list[BaseTool]:
 def _discover_openapi(spec: ConnectionSpec, principal: Any) -> list[BaseTool]:
     from leve.connections.openapi import build_openapi_tools
 
+    # OpenAPI tools resolve headers per call from the live caller principal
+    # (true per-caller credentials, SPEC §5.6) rather than baking one token.
+    async def headers_provider() -> dict[str, str] | None:
+        from leve.auth import current_principal
+
+        return await _resolve_headers(spec.auth, current_principal())
+
     return [
         namespaced(tool, spec.name)
         for tool in build_openapi_tools(
             spec.config["spec"],
             base_url=spec.config["base_url"],
-            headers=_resolve_headers(spec.auth, principal),
+            headers_provider=headers_provider,
         )
     ]
 
 
-def _resolve_headers(auth: dict[str, Any] | None, principal: Any) -> dict[str, str] | None:
-    """Resolve auth into request headers.
+async def _resolve_headers(auth: dict[str, Any] | None, principal: Any) -> dict[str, str] | None:
+    """Resolve auth into request headers for ``principal``.
 
-    M3 supports a custom ``get_token`` callable (the common static/dev case).
-    The declarative ``broker`` form resolves through the credential broker in M5;
-    until then it is ignored here so discovery still works without credentials.
+    Supports a custom ``get_token(principal)`` callable (may be sync or async) and
+    the declarative ``{"broker", "provider"}`` form, which resolves through the
+    caller's :class:`~leve.auth.Principal` credential broker. Returns ``None`` (no
+    header — fail closed) when no credential can be resolved, never a forged one.
     """
 
     if not auth:
         return None
-    get_token: Callable[[Any], str] | None = auth.get("get_token")
-    if get_token is None:
-        return None
-    token = get_token(principal)
+
+    token: str | None = None
+    get_token: Callable[[Any], Any] | None = auth.get("get_token")
+    if get_token is not None:
+        result = get_token(principal)
+        token = await result if inspect.isawaitable(result) else result
+    elif auth.get("broker") and principal is not None:
+        provider = auth.get("provider")
+        if provider:
+            credential = await principal.credential(provider)
+            token = credential.token
+
     return {"Authorization": f"Bearer {token}"} if token else None
+
+
+async def _resolve_headers_safe(auth: dict[str, Any] | None, principal: Any) -> dict[str, str] | None:
+    """Build-time header resolution that fails *closed* instead of crashing.
+
+    At build there is no caller (``principal`` is ``None``), so a per-caller
+    resolver can't run. Rather than bake one identity's token for all callers or
+    abort the whole build, we resolve only what works without a principal and
+    otherwise return ``None`` (the call then runs unauthenticated → fails closed).
+    """
+
+    try:
+        return await _resolve_headers(auth, principal)
+    except Exception:
+        return None

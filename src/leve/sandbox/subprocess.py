@@ -11,12 +11,18 @@ it must never be the production default.
 from __future__ import annotations
 
 import asyncio
+import os
 import shutil
 import tempfile
 from pathlib import Path
 
 from leve.config import SandboxLimits
 from leve.sandbox.base import Sandbox, SandboxResult
+
+# A minimal environment for sandboxed commands. Inheriting the harness env would
+# leak ambient secrets (LEVE_CRED_*, provider tokens) into untrusted agent code,
+# defeating SPEC §5.6 — code that needs privileged data must re-broker via a tool.
+_SAFE_ENV_KEYS = ("PATH", "HOME", "LANG", "LC_ALL", "TZ")
 
 
 class SubprocessSandbox(Sandbox):
@@ -32,6 +38,7 @@ class SubprocessSandbox(Sandbox):
         proc = await asyncio.create_subprocess_shell(
             command,
             cwd=str(self._workdir),
+            env=self._safe_env(),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -52,6 +59,12 @@ class SubprocessSandbox(Sandbox):
             stderr=self._truncate(stderr),
             exit_code=proc.returncode if proc.returncode is not None else -1,
         )
+
+    @staticmethod
+    def _safe_env() -> dict[str, str]:
+        """A scrubbed environment carrying only innocuous, non-secret variables."""
+
+        return {k: os.environ[k] for k in _SAFE_ENV_KEYS if k in os.environ}
 
     def _truncate(self, raw: bytes) -> str:
         """Decode output, capping it so a runaway command can't flood context."""

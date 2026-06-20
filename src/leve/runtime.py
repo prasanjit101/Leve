@@ -10,7 +10,10 @@ here precisely so the model can neither read nor forge identity.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from leve.auth import Principal
 
 
 @dataclass
@@ -21,7 +24,11 @@ class LeveContext:
         template_vars: Non-sensitive values available to ``instructions.md``
             templating (e.g. ``channel_name``).
         metadata: Free-form run metadata (channel id, source, …) for tracing.
+        principal: The caller's identity (SPEC §5.6). Lives here, in runtime
+            context — never in the ``messages`` state the model reads or writes —
+            so the model can neither leak nor forge it.
     """
 
     template_vars: dict[str, Any] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
+    principal: "Principal | None" = None

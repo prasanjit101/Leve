@@ -104,6 +104,13 @@ class SandboxConfig:
 
 
 @dataclass(frozen=True)
+class CredentialsConfig:
+    """Credential broker selection (SPEC §5.7, §11)."""
+
+    broker: str = "oauth_store"  # static | oauth_store | token_exchange
+
+
+@dataclass(frozen=True)
 class DeployConfig:
     """Deployment target (SPEC §10, §11)."""
 
@@ -122,6 +129,7 @@ class LeveConfig:
     persistence: PersistenceConfig = field(default_factory=PersistenceConfig)
     tracing: TracingConfig = field(default_factory=TracingConfig)
     sandbox: SandboxConfig = field(default_factory=SandboxConfig)
+    credentials: CredentialsConfig = field(default_factory=CredentialsConfig)
     deploy: DeployConfig = field(default_factory=DeployConfig)
 
     @property
@@ -175,6 +183,7 @@ def _parse_config(path: Path) -> LeveConfig:
     tracing = data.get("tracing", {})
     sandbox = data.get("sandbox", {})
     limits = sandbox.get("limits", {})
+    credentials = data.get("credentials", {})
     deploy = data.get("deploy", {})
 
     return LeveConfig(
@@ -203,6 +212,7 @@ def _parse_config(path: Path) -> LeveConfig:
                 max_output_bytes=limits.get("max_output_bytes", SandboxLimits.max_output_bytes),
             ),
         ),
+        credentials=CredentialsConfig(broker=credentials.get("broker", CredentialsConfig.broker)),
         deploy=DeployConfig(
             target=deploy.get("target", DeployConfig.target),
             base_url=deploy.get("base_url", DeployConfig.base_url),

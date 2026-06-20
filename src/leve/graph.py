@@ -33,7 +33,7 @@ from langchain_core.tools import BaseTool
 from leve.agent import CompactionConfig
 from leve.instructions import make_prompt_middleware
 from leve.loader import LoadedAgent
-from leve.middleware import ApprovalMiddleware
+from leve.middleware import ApprovalMiddleware, PrincipalMiddleware
 from leve.models import build_model
 from leve.runtime import LeveContext
 from leve.skills import make_load_skill_tool
@@ -127,6 +127,10 @@ def _build_middleware(loaded: LoadedAgent, model) -> list[AgentMiddleware]:
 
     if loaded.instructions.strip():
         middleware.append(make_prompt_middleware(loaded.instructions))
+
+    # Always bind the caller principal around tool calls (outermost tool wrapper),
+    # so injected-principal tools and consent interrupts work for every agent.
+    middleware.append(PrincipalMiddleware())
 
     compaction = loaded.spec.compaction or CompactionConfig()  # None == auto-on
     if compaction.enabled:

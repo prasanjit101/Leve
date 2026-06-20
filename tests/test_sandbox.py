@@ -79,6 +79,19 @@ async def test_sandbox_tool():
         await sandbox.close()
 
 
+async def test_sandbox_has_no_ambient_credentials(monkeypatch):
+    """Sandboxed code must not inherit harness secrets (SPEC §5.6)."""
+
+    monkeypatch.setenv("LEVE_CRED_WAREHOUSE", "super-secret")
+    sandbox = SubprocessSandbox(SandboxLimits())
+    try:
+        result = await sandbox.run("echo LEAK=$LEVE_CRED_WAREHOUSE")
+        assert "super-secret" not in result.stdout
+        assert "LEAK=" in result.stdout  # var simply absent, not the secret
+    finally:
+        await sandbox.close()
+
+
 async def test_output_is_truncated():
     sandbox = SubprocessSandbox(SandboxLimits(max_output_bytes=10))
     try:

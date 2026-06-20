@@ -14,7 +14,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping
+
+if TYPE_CHECKING:
+    from leve.auth import Principal
 
 
 @dataclass(frozen=True)
@@ -24,6 +27,9 @@ class IncomingMessage:
     session_key: str  # becomes the LangGraph thread_id
     text: str
     target: dict[str, Any] = field(default_factory=dict)  # where to deliver the reply
+    # The authenticated caller behind this message (SPEC §5.6). The adapter builds
+    # it from the surface's verified identity; the broker is attached downstream.
+    principal: "Principal | None" = None
 
 
 class ChannelAdapter(ABC):

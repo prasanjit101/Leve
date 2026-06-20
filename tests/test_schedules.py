@@ -55,6 +55,35 @@ async def test_run_schedule_drives_runtime_and_delivers(make_loaded):
     assert delivered == {"target": {"channel": "C1"}, "text": "weekly summary"}
 
 
+async def test_schedule_runs_under_app_principal(make_loaded):
+    from langchain_core.messages import AIMessage
+
+    from leve.auth import InjectedPrincipal, Principal
+    from leve.tools import define_tool
+
+    seen: list = []
+
+    @define_tool(description="Record the caller.")
+    async def whoami(principal: Principal = InjectedPrincipal()) -> str:
+        seen.append((principal.subject, principal.claims.get("app")) if principal else None)
+        return "ok"
+
+    @define_schedule(cron="@daily")
+    async def nightly(ctx):
+        await ctx.receive(message="run")
+
+    model = FakeChatModel(responses=[
+        AIMessage(content="", tool_calls=[{"name": "whoami", "args": {}, "id": "s1"}]),
+        "done",
+    ])
+    loaded = make_loaded(model, tools=(whoami,))
+    async with runtime_for(loaded) as rt:
+        await run_schedule(nightly, rt)
+
+    # The scheduled run executed under an explicit app principal, not None/anonymous.
+    assert seen and seen[0][1] is True and seen[0][0] == "schedule:nightly"
+
+
 def test_schedule_discovery(tmp_path, write_project):
     schedule = """\
         from leve.schedules import define_schedule

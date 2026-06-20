@@ -29,9 +29,11 @@ logger = logging.getLogger("leve.session")
 class AgentRuntime:
     """Drives a compiled agent graph over checkpointed threads (sessions)."""
 
-    def __init__(self, graph: CompiledStateGraph, loaded: LoadedAgent):
+    def __init__(self, graph: CompiledStateGraph, loaded: LoadedAgent, broker: Any = None):
         self._graph = graph
         self._loaded = loaded
+        # The credential broker every caller's principal resolves through (§5.7).
+        self.broker = broker
 
     @property
     def name(self) -> str:

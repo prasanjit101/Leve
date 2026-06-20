@@ -17,6 +17,7 @@ from typing import Any, Mapping
 
 import httpx
 
+from leve.auth import Principal
 from leve.channels import ChannelAdapter, IncomingMessage
 
 _REPLAY_WINDOW_SEC = 60 * 5
@@ -61,10 +62,17 @@ class SlackAdapter(ChannelAdapter):
             return None
         channel = event.get("channel", "")
         thread = event.get("thread_ts") or event.get("ts", "")
+        # The verified Slack user is the caller; team is the tenant (SPEC §5.6).
+        principal = Principal(
+            subject=event.get("user", "unknown"),
+            tenant=payload.get("team_id"),
+            claims={"channel": channel},
+        )
         return IncomingMessage(
             session_key=f"slack:{channel}:{thread}",
             text=event["text"],
             target={"channel": channel, "thread_ts": thread},
+            principal=principal,
         )
 
     async def deliver(self, target: dict[str, Any], text: str) -> None:

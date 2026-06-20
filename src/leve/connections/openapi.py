@@ -24,9 +24,17 @@ _TYPE_MAP = {"string": str, "integer": int, "number": float, "boolean": bool}
 
 
 def build_openapi_tools(
-    spec: dict[str, Any], *, base_url: str, headers: dict[str, str] | None = None
+    spec: dict[str, Any],
+    *,
+    base_url: str,
+    headers: dict[str, str] | None = None,
+    headers_provider: Any = None,
 ) -> list[BaseTool]:
-    """Build a tool for each operation in the OpenAPI ``spec``."""
+    """Build a tool for each operation in the OpenAPI ``spec``.
+
+    ``headers_provider`` (an async ``() -> dict | None``) resolves auth headers
+    per call so credentials are per-caller; ``headers`` is a static fallback.
+    """
 
     tools: list[BaseTool] = []
     seen: set[str] = set()
@@ -37,7 +45,7 @@ def build_openapi_tools(
             if not operation:
                 continue
             params = shared + [_resolve(p, spec) for p in operation.get("parameters", [])]
-            tool = _build_tool(path, method, operation, params, base_url, headers)
+            tool = _build_tool(path, method, operation, params, base_url, headers, headers_provider)
             tool = _dedupe(tool, seen)
             tools.append(tool)
     return tools
@@ -50,6 +58,7 @@ def _build_tool(
     params: list[dict],
     base_url: str,
     headers: dict[str, str] | None,
+    headers_provider: Any,
 ) -> BaseTool:
     name = operation.get("operationId") or f"{method}_{path.strip('/').replace('/', '_')}"
     description = operation.get("summary") or operation.get("description") or name
@@ -62,7 +71,9 @@ def _build_tool(
     async def call(**kwargs: Any) -> dict:
         url = base_url.rstrip("/") + _format_path(path, kwargs, by_loc["path"])
         query = {k: kwargs[k] for k in by_loc["query"] if kwargs.get(k) is not None}
-        req_headers = dict(headers or {})
+        # Per-caller auth headers resolved now (call time), not at build.
+        resolved = (await headers_provider()) if headers_provider else headers
+        req_headers = dict(resolved or {})
         req_headers.update(
             {k: str(kwargs[k]) for k in by_loc["header"] if kwargs.get(k) is not None}
         )

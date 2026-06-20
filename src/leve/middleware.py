@@ -23,6 +23,8 @@ from langchain.agents.middleware import AgentMiddleware, ToolCallRequest
 from langchain_core.messages import ToolMessage
 from langgraph.types import Command, interrupt
 
+from leve.auth import reset_current_principal, set_current_principal
+from leve.credentials import NeedsConsent
 from leve.tools import ToolSpec
 
 
@@ -96,6 +98,39 @@ class ApprovalMiddleware(AgentMiddleware):
             # than silently letting the call through. The model cannot exploit a
             # buggy predicate to skip approval.
             return True
+
+
+class PrincipalMiddleware(AgentMiddleware):
+    """Binds the caller principal for the duration of each tool call (SPEC §5.6).
+
+    Reads the principal from the run's runtime context (never model state) and
+    publishes it on a context variable that injected-principal tools read. Also
+    turns a :class:`~leve.credentials.NeedsConsent` raised by a broker into a
+    consent interrupt, so authorization reuses the human-in-the-loop pause (§5.7).
+    """
+
+    async def awrap_tool_call(
+        self,
+        request: ToolCallRequest,
+        handler: Callable[[ToolCallRequest], Awaitable[ToolMessage | Command]],
+    ) -> ToolMessage | Command:
+        principal = _principal_from(request)
+        token = set_current_principal(principal)
+        try:
+            return await handler(request)
+        except NeedsConsent as consent:
+            # Pause for authorization; on resume the node re-runs and the broker
+            # (now holding the granted token) resolves successfully.
+            interrupt(
+                {
+                    "type": "consent",
+                    "provider": consent.provider,
+                    "authorize_url": consent.authorize_url,
+                }
+            )
+            raise  # unreachable: interrupt() suspends the run
+        finally:
+            reset_current_principal(token)
 
 
 def _is_approved(decision: Any) -> bool:

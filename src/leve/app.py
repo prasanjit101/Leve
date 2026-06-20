@@ -16,6 +16,7 @@ from langchain_core.tools import BaseTool
 
 from leve.config import LeveConfig
 from leve.connections import discover_tools
+from leve.credentials import create_broker
 from leve.evals import EvalResult, EvalSpec, run_eval
 from leve.graph import build_graph
 from leve.loader import LoadedAgent, discovery, load_project
@@ -48,7 +49,7 @@ async def build_runtime(config: LeveConfig) -> AsyncIterator[AgentRuntime]:
             store=store,
             extra_tools_for=lambda agent: extra_tools.get(id(agent), []),
         )
-        yield AgentRuntime(graph, loaded)
+        yield AgentRuntime(graph, loaded, broker=create_broker(config.credentials))
 
 
 async def _resolve_extra_tools(

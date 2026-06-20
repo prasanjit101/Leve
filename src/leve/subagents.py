@@ -21,7 +21,9 @@ from langchain_core.tools import StructuredTool
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, Field
 
+from leve.auth import current_principal
 from leve.errors import LoaderError
+from leve.runtime import LeveContext
 
 
 class DelegateInput(BaseModel):
@@ -48,12 +50,16 @@ def make_delegation_tool(
     async def delegate(task: str, config: RunnableConfig = None) -> str:
         parent_thread = (config or {}).get("configurable", {}).get("thread_id", "root")
         child_thread = f"{parent_thread}::{name}::{uuid.uuid4().hex}"
+        # The subagent inherits the caller's principal (SPEC §5.6). It travels in
+        # runtime context, not message state; a parent could pass a narrowed
+        # principal here, but delegation can never widen access.
         result = await subgraph.ainvoke(
             {"messages": [HumanMessage(content=task)]},
             config={
                 "configurable": {"thread_id": child_thread},
                 "recursion_limit": recursion_limit,
             },
+            context=LeveContext(principal=current_principal()),
         )
         # If the subagent paused on an interrupt (e.g. an approval gate), the run
         # did not complete. Returning the last message would be misleading, and

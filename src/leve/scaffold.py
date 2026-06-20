@@ -19,6 +19,9 @@ default_model = "{model}"
 checkpointer = "sqlite"          # sqlite | memory
 store = "memory"
 
+[credentials]
+broker = "oauth_store"           # static | oauth_store | token_exchange
+
 [tracing]
 provider = "langsmith"
 project = "{name}"

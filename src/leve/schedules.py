@@ -63,10 +63,16 @@ class ScheduleContext:
     ) -> str:
         """Start a fresh session, run the message, and deliver any reply."""
 
+        from leve.runtime import LeveContext
         from leve.session import extract_reply
 
         session_key = f"schedule:{self._name}:{uuid.uuid4().hex}"
-        events = [event async for event in self._runtime.run(session_key, message)]
+        # Scheduled runs carry an explicit, auditable app principal — never a
+        # user's permissions (SPEC §5.6).
+        context = LeveContext(principal=auth or self.app_auth)
+        events = [
+            event async for event in self._runtime.run(session_key, message, context=context)
+        ]
         reply = extract_reply(events)
         if channel is not None:
             await channel.adapter.deliver(target or {}, reply)
@@ -76,8 +82,14 @@ class ScheduleContext:
 async def run_schedule(
     spec: ScheduleSpec, runtime: "AgentRuntime", *, app_auth: Any = None
 ) -> None:
-    """Execute a schedule's handler once."""
+    """Execute a schedule's handler once under an app principal."""
 
+    from leve.auth import app_principal, with_broker
+
+    # Default to a service identity (with the broker attached) so scheduled tool
+    # calls have an explicit, auditable principal rather than none.
+    if app_auth is None:
+        app_auth = with_broker(app_principal(f"schedule:{spec.name}"), runtime.broker)
     await spec.func(ScheduleContext(spec.name, runtime, app_auth))
 
 

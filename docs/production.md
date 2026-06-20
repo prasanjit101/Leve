@@ -52,7 +52,7 @@ is required only for multi-replica or autoscaled deployments.
 Install the matching extras on the production image:
 
 ```bash
-uv sync --extra postgres --extra microsandbox   # + --extra discord if used
+uv sync --extra postgres --extra microsandbox   # + --extra discord / --extra google if used
 ```
 
 ### Environment variables
@@ -60,6 +60,7 @@ uv sync --extra postgres --extra microsandbox   # + --extra discord if used
 | Variable | Purpose |
 | -------- | ------- |
 | `ANTHROPIC_API_KEY` (or provider key) | Model access |
+| `GOOGLE_API_KEY` | Gemini model access (`leve[google]` / `google_genai:<model>`) |
 | `LEVE_POSTGRES_URL` | Overrides `[persistence] postgres_url` |
 | `LEVE_CHECKPOINTER`, `LEVE_STORE` | Override backend selection per environment |
 | `LANGSMITH_API_KEY` | Enables LangSmith tracing (also `LANGSMITH_PROJECT`) |

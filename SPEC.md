@@ -86,7 +86,7 @@ runnable graph. No registration, no manual wiring of the agent loop.
 - **Tools / connections:** `@define_tool` decorator (wrapping LangChain
   `StructuredTool`) + `langchain-mcp-adapters` for MCP.
 - **Tracing & evals:** LangSmith (OTel export supported for Datadog/Honeycomb/Jaeger).
-- **CLI:** `leve` (Typer-based), with a Textual TUI dev client.
+- **CLI:** `leve` (Typer-based), with a Rich-based TUI dev client.
 - **Packaging:** distributed as the `leve` PyPI package.
 
 ---

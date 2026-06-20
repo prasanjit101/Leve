@@ -12,6 +12,7 @@ here runs offline with no cloud dependencies (SQLite + in-memory backends).
 - A model provider key for real runs (the default model is Anthropic):
   ```bash
   export ANTHROPIC_API_KEY=sk-ant-...
+  export GOOGLE_API_KEY=...           # only for leve[google] / google_genai:<model>
   ```
   Not needed for the test suite — tests use `leve.testing.FakeChatModel`.
 

@@ -19,9 +19,12 @@ dependencies = [
     "fastapi>=0.115.6",
     "uvicorn[standard]>=0.34.0",
     "httpx>=0.28.1",
-    "textual>=1.0.0",
+    # Rich-powered dev TUI client.
+    "rich>=13.9.0",
     # Skills frontmatter parsing.
     "pyyaml>=6.0.2",
+    # Load project-local `.env` so secrets work the same in dev as in deploy.
+    "python-dotenv>=1.0.1",
     # MCP connections (remote tool discovery).
     "langchain-mcp-adapters>=0.1.0",
 ]

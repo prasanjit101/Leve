@@ -14,6 +14,8 @@ import tomllib
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from leve.errors import ConfigError
 
 CONFIG_FILENAME = "leve.toml"
@@ -153,6 +155,18 @@ def find_config_file(start: Path) -> Path | None:
     return None
 
 
+def _load_project_dotenv(project_dir: Path) -> None:
+    """Load ``project_dir/.env`` into the process environment if present.
+
+    ``override=False`` keeps any value already exported in the real environment
+    authoritative, so the precedence is: actual env > ``.env`` > config defaults.
+    """
+
+    dotenv_path = project_dir / ".env"
+    if dotenv_path.is_file():
+        load_dotenv(dotenv_path, override=False)
+
+
 def load_config(start_dir: Path | str | None = None) -> LeveConfig:
     """Load and validate project config, applying env overrides.
 
@@ -167,6 +181,11 @@ def load_config(start_dir: Path | str | None = None) -> LeveConfig:
         config = LeveConfig(project_dir=start.resolve())
     else:
         config = _parse_config(config_path)
+
+    # Load the project-local `.env` before resolving env overrides so a `.env`
+    # behaves the same in local dev as it does on LangGraph Platform (which reads
+    # the `.env` named in langgraph.json). The real environment always wins.
+    _load_project_dotenv(config.project_dir)
 
     config = _apply_env_overrides(config)
     config.persistence.validate()

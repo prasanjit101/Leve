@@ -81,6 +81,34 @@ __pycache__/
 .env
 """
 
+# Starter secrets template. Copy to `.env` (gitignored) and fill in — Leve loads
+# it automatically for `leve dev`/`build`/`eval`, and LangGraph Platform reads the
+# `.env` named in the emitted langgraph.json on deploy.
+_ENV_EXAMPLE = """\
+# Copy this file to `.env` and fill in your secrets. `.env` is gitignored.
+# Real environment variables always take precedence over values set here.
+
+# --- Model provider (set the key for whichever provider your model uses) ---
+ANTHROPIC_API_KEY=
+# OPENAI_API_KEY=
+# GOOGLE_API_KEY=          # for leve[google] / google_genai:<model>
+
+# --- Tracing (optional; [tracing] provider = "langsmith") ---
+# LANGSMITH_API_KEY=
+
+# --- Config overrides (optional; override leve.toml) ---
+# LEVE_DEFAULT_MODEL=anthropic:claude-opus-4-8
+# LEVE_CHECKPOINTER=sqlite
+# LEVE_STORE=memory
+# LEVE_POSTGRES_URL=
+
+# --- Channel adapters (only if you add them via `leve channels add`) ---
+# SLACK_SIGNING_SECRET=
+# SLACK_BOT_TOKEN=
+# DISCORD_PUBLIC_KEY=
+# DISCORD_BOT_TOKEN=
+"""
+
 
 _SLACK_CHANNEL = '''\
 from leve.channels import define_channel
@@ -145,6 +173,7 @@ def scaffold_project(directory: Path, *, name: str, model: str) -> list[Path]:
     files = {
         "leve.toml": _LEVE_TOML.format(model=model, name=name),
         ".gitignore": _GITIGNORE,
+        ".env.example": _ENV_EXAMPLE,
         "agent/agent.py": _AGENT_PY.format(model=model),
         "agent/instructions.md": _INSTRUCTIONS_MD,
         "agent/tools/current_time.py": _EXAMPLE_TOOL,

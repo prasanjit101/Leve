@@ -160,7 +160,7 @@ def deploy() -> None:
 def dev(
     host: str = typer.Option("127.0.0.1", help="Bind host."),
     port: int = typer.Option(8000, help="Bind port."),
-    tui: bool = typer.Option(True, help="Launch the Textual dev client."),
+    tui: bool = typer.Option(True, help="Launch the Rich dev client."),
 ) -> None:
     """Run the dev server (SQLite checkpointer) and, by default, the TUI client."""
 

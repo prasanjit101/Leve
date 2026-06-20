@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import threading
 import time
+from enum import Enum
 from pathlib import Path
+from typing import Optional
 
 import typer
 
@@ -156,17 +158,45 @@ def deploy() -> None:
         typer.secho(f"  ! {warning}", fg=typer.colors.YELLOW)
 
 
+class DevMode(str, Enum):
+    """How ``leve dev`` runs: clean TUI, server only, or a tmux split."""
+
+    tui = "tui"
+    server = "server"
+    split = "split"
+
+
 @app.command()
 def dev(
     host: str = typer.Option("127.0.0.1", help="Bind host."),
     port: int = typer.Option(8000, help="Bind port."),
-    tui: bool = typer.Option(True, help="Launch the Rich dev client."),
+    mode: Optional[DevMode] = typer.Option(
+        None,
+        "--mode",
+        help="tui (default): clean chat, server logs → .leve/dev.log. "
+        "server: logs to stdout, no chat. split: chat + live logs side-by-side (tmux).",
+    ),
+    no_tui: bool = typer.Option(
+        False,
+        "--no-tui",
+        hidden=True,
+        help="Deprecated alias for --mode server.",
+    ),
 ) -> None:
     """Run the dev server (SQLite checkpointer) and, by default, the TUI client."""
 
-    import uvicorn
-
-    from leve.server import create_app
+    # Reconcile the deprecated --no-tui alias with --mode.
+    if no_tui:
+        if mode is not None:
+            typer.secho(
+                "Pass either --no-tui or --mode, not both.",
+                fg=typer.colors.RED,
+                err=True,
+            )
+            raise typer.Exit(1)
+        mode = DevMode.server
+    if mode is None:
+        mode = DevMode.tui
 
     try:
         config = load_config()
@@ -174,21 +204,85 @@ def dev(
         typer.secho(str(exc), fg=typer.colors.RED, err=True)
         raise typer.Exit(1) from exc
 
-    server = uvicorn.Server(
-        uvicorn.Config(create_app(config), host=host, port=port, log_level="info")
+    if mode is DevMode.server:
+        _run_server_mode(config, host, port)
+    elif mode is DevMode.split:
+        from leve.devlog import run_split
+
+        started = run_split(
+            config, host, port, run_client=lambda: _run_tui_mode(config, host, port)
+        )
+        if not started:
+            typer.secho(
+                "tmux not found; falling back to --mode tui.",
+                fg=typer.colors.YELLOW,
+            )
+            _run_tui_mode(config, host, port)
+    else:
+        _run_tui_mode(config, host, port)
+
+
+def _build_server(config, host: str, port: int, log_config=None):
+    """Construct the uvicorn server, optionally with a custom logging config."""
+
+    import uvicorn
+
+    from leve.server import create_app
+
+    return uvicorn.Server(
+        uvicorn.Config(
+            create_app(config),
+            host=host,
+            port=port,
+            log_level="info",
+            log_config=log_config,
+        )
     )
 
-    if not tui:
-        server.run()
-        return
+
+def _run_server_mode(config, host: str, port: int) -> None:
+    """Serve in the foreground with logs on stdout (no TUI)."""
+
+    _build_server(config, host, port).run()
+
+
+def _run_tui_mode(config, host: str, port: int) -> None:
+    """Serve in the background (logs → .leve/dev.log) and run the TUI client."""
+
+    from leve.devlog import configure_dev_logging
+
+    try:
+        log_path, log_config = configure_dev_logging(config)
+    except OSError as exc:
+        typer.secho(
+            f"Could not open log file ({exc}); server logs will stay on stdout.",
+            fg=typer.colors.YELLOW,
+        )
+        log_path, log_config = None, None
+
+    server = _build_server(config, host, port, log_config)
 
     # TUI needs the terminal, so serve in a background thread and run the client
     # in the foreground; stopping the client shuts the server down.
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
+    _await_server_start(server, thread, host, port)
 
-    # Wait for startup, but fail fast if the server thread dies (e.g. port in
-    # use) instead of spinning forever.
+    if log_path is not None:
+        typer.secho(f"logs → {log_path.relative_to(config.project_dir)}", fg=typer.colors.CYAN)
+
+    from leve.tui import run_tui
+
+    try:
+        run_tui(f"http://{host}:{port}")
+    finally:
+        server.should_exit = True
+        thread.join(timeout=5)
+
+
+def _await_server_start(server, thread: threading.Thread, host: str, port: int) -> None:
+    """Block until the server reports started; fail fast if it dies or stalls."""
+
     deadline = time.monotonic() + 15.0
     while not server.started:
         if not thread.is_alive():
@@ -203,14 +297,6 @@ def dev(
             typer.secho("Server did not start within 15s.", fg=typer.colors.RED, err=True)
             raise typer.Exit(1)
         time.sleep(0.05)
-
-    from leve.tui import run_tui
-
-    try:
-        run_tui(f"http://{host}:{port}")
-    finally:
-        server.should_exit = True
-        thread.join(timeout=5)
 
 
 if __name__ == "__main__":  # pragma: no cover

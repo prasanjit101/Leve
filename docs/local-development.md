@@ -82,10 +82,20 @@ it doubles as a fast structural check in CI.
 ## 5. Run it (dev server + TUI)
 
 ```bash
-uv run leve dev                     # serves on 127.0.0.1:8000 and opens the TUI
-uv run leve dev --no-tui            # server only (for curl / scripts)
+uv run leve dev                     # clean TUI; server logs → ./.leve/dev.log
+uv run leve dev --mode server       # server only, logs to stdout (for curl / scripts)
+uv run leve dev --mode split        # chat + live logs side-by-side (requires tmux)
 uv run leve dev --host 0.0.0.0 --port 9000
 ```
+
+`leve dev` runs in one of three modes via `--mode`:
+
+- **`tui`** (default) — the chat client in the foreground; the server's logs are
+  redirected to `./.leve/dev.log` (truncated each run, capped by rotation) so the
+  transcript stays clean. `tail -f .leve/dev.log` to watch them.
+- **`server`** — the HTTP server only, logs on stdout. Use for `curl`, scripts, CI.
+- **`split`** — a `tmux` split with chat on the left and a live log tail on the
+  right. Falls back to `tui` if `tmux` isn't installed.
 
 `leve dev` uses the SQLite checkpointer by default (`./.leve/checkpoints.sqlite`),
 so sessions survive restarts. The TUI is just a client over the HTTP API.

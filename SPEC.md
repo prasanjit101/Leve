@@ -626,8 +626,11 @@ Mirrors eve's session API, backed by LangGraph runs/threads:
 | `GET  /leve/v1/session/:id`         | Fetch session state + history from the checkpointer.|
 
 Events are derived from `graph.astream_events(...)` and normalized to a stable
-schema (`turn.start`, `model.delta`, `tool.call`, `tool.result`,
-`approval.requested`, `turn.end`).
+schema: `turn.start`, `model.delta` (best-effort live tokens, emitted only when
+the provider streams), `model.message` (the reliable full assistant message;
+suppressed when that same model run already streamed tokens, so consumers never
+double-count), `tool.call`, `tool.result`, `approval.requested`, `error`, and
+`turn.end` (carries `interrupted` and `errored` flags).
 
 ---
 

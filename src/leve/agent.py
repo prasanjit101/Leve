@@ -1,0 +1,76 @@
+"""The agent descriptor — ``agent/agent.py``.
+
+``define_agent`` returns a *thin descriptor* (``AgentSpec``). It deliberately
+does **no** compilation: the loader (``leve.loader``) is the single place that
+assembles model + instructions + tools + … into a runnable graph (SPEC §4.1,
+§6). Keeping this as inert data — not a half-built graph — is what lets the same
+descriptor be compiled with different checkpointers/stores per environment.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:  # avoid importing heavy langgraph/langchain types at module load
+    from langchain_core.language_models import BaseChatModel
+    from langgraph.checkpoint.base import BaseCheckpointSaver
+    from langgraph.store.base import BaseStore
+
+
+@dataclass(frozen=True)
+class AgentSpec:
+    """An immutable description of an agent's model + run configuration.
+
+    Capabilities (tools, skills, subagents, connections, channels, schedules)
+    are *not* fields here — they are discovered from sibling files in the agent
+    directory by the loader. This descriptor only carries what cannot be
+    inferred from the tree: the model and how the loop runs.
+    """
+
+    model: "str | BaseChatModel"
+    fallbacks: tuple[str, ...] = ()
+    description: str = ""
+    model_options: dict[str, Any] = field(default_factory=dict)
+    recursion_limit: int = 25
+    # Per-agent overrides; when ``None`` the project-level backend (leve.toml) is used.
+    checkpointer: "BaseCheckpointSaver | None" = None
+    store: "BaseStore | None" = None
+
+
+def define_agent(
+    model: "str | BaseChatModel",
+    *,
+    fallbacks: "list[str] | None" = None,
+    description: str = "",
+    model_options: "dict[str, Any] | None" = None,
+    recursion_limit: int = 25,
+    checkpointer: "BaseCheckpointSaver | None" = None,
+    store: "BaseStore | None" = None,
+) -> AgentSpec:
+    """Describe an agent.
+
+    Args:
+        model: A ``provider:model`` string (resolved via ``init_chat_model``) or
+            an instantiated LangChain chat model. A string is the common case;
+            passing a model instance is the escape hatch for custom configs and
+            for tests (inject a fake model — no provider call).
+        fallbacks: Ordered ``provider:model`` strings tried if the primary model
+            errors (gateway-style failover).
+        description: Required when this agent is used as a subagent — it becomes
+            the description of the auto-generated ``delegate_to_<name>`` tool.
+        model_options: Extra model kwargs (``temperature``, ``max_tokens``, …).
+        recursion_limit: LangGraph step ceiling per turn (guards runaway loops).
+        checkpointer: Override the project checkpointer for this agent.
+        store: Override the project long-term-memory store for this agent.
+    """
+
+    return AgentSpec(
+        model=model,
+        fallbacks=tuple(fallbacks or ()),
+        description=description,
+        model_options=dict(model_options or {}),
+        recursion_limit=recursion_limit,
+        checkpointer=checkpointer,
+        store=store,
+    )

@@ -36,7 +36,7 @@ class CompactionConfig:
     # How much recent conversation to retain verbatim after summarizing.
     keep: TriggerClause = ("messages", 20)
     # Model used to write the summary; defaults to the agent's own model.
-    model: "str | BaseChatModel | None" = None
+    model: str | BaseChatModel | None = None
 
 
 @dataclass(frozen=True)
@@ -49,31 +49,31 @@ class AgentSpec:
     inferred from the tree: the model and how the loop runs.
     """
 
-    model: "str | BaseChatModel"
+    model: str | BaseChatModel
     fallbacks: tuple[str, ...] = ()
     description: str = ""
     model_options: dict[str, Any] = field(default_factory=dict)
     recursion_limit: int = 25
     # None means "auto" — a default CompactionConfig is applied at compile time.
-    compaction: "CompactionConfig | None" = None
+    compaction: CompactionConfig | None = None
     # Opt-in: inject sandbox tools (run untrusted code) using the project adapter.
     sandbox: bool = False
     # Per-agent overrides; when ``None`` the project-level backend (leve.toml) is used.
-    checkpointer: "BaseCheckpointSaver | None" = None
-    store: "BaseStore | None" = None
+    checkpointer: BaseCheckpointSaver | None = None
+    store: BaseStore | None = None
 
 
 def define_agent(
-    model: "str | BaseChatModel",
+    model: str | BaseChatModel,
     *,
-    fallbacks: "list[str] | None" = None,
+    fallbacks: list[str] | None = None,
     description: str = "",
-    model_options: "dict[str, Any] | None" = None,
+    model_options: dict[str, Any] | None = None,
     recursion_limit: int = 25,
-    compaction: "CompactionConfig | None" = None,
+    compaction: CompactionConfig | None = None,
     sandbox: bool = False,
-    checkpointer: "BaseCheckpointSaver | None" = None,
-    store: "BaseStore | None" = None,
+    checkpointer: BaseCheckpointSaver | None = None,
+    store: BaseStore | None = None,
 ) -> AgentSpec:
     """Describe an agent.
 

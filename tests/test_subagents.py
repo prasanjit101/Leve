@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
+from contextlib import AsyncExitStack
 from pathlib import Path
 
 import pytest
 from langchain_core.messages import AIMessage
-
-from contextlib import AsyncExitStack
 
 from leve.agent import define_agent
 from leve.app import _resolve_extra_tools
@@ -20,11 +19,15 @@ from leve.tools import define_tool
 from tests.conftest import collect, runtime_for
 
 
-def _subagent(name: str, response: str, *, description: str = "Does research.") -> LoadedAgent:
+def _subagent(
+    name: str, response: str, *, description: str = "Does research."
+) -> LoadedAgent:
     return LoadedAgent(
         name=name,
         path=Path("."),
-        spec=define_agent(model=FakeChatModel(responses=[response]), description=description),
+        spec=define_agent(
+            model=FakeChatModel(responses=[response]), description=description
+        ),
     )
 
 
@@ -34,13 +37,22 @@ async def test_parent_delegates_and_gets_final_message():
         responses=[
             AIMessage(
                 content="",
-                tool_calls=[{"name": "delegate_to_researcher", "args": {"task": "dig in"}, "id": "c1"}],
+                tool_calls=[
+                    {
+                        "name": "delegate_to_researcher",
+                        "args": {"task": "dig in"},
+                        "id": "c1",
+                    }
+                ],
             ),
             "parent done",
         ]
     )
     parent = LoadedAgent(
-        name="analyst", path=Path("."), spec=define_agent(model=parent_model), subagents=(sub,)
+        name="analyst",
+        path=Path("."),
+        spec=define_agent(model=parent_model),
+        subagents=(sub,),
     )
 
     async with runtime_for(parent) as rt:
@@ -73,7 +85,11 @@ async def test_subagent_sandbox_tools_are_resolved():
     sub = LoadedAgent(
         name="runner",
         path=_Path("."),
-        spec=define_agent(sandbox=True, description="Runs shell.", model=FakeChatModel(responses=["x"])),
+        spec=define_agent(
+            sandbox=True,
+            description="Runs shell.",
+            model=FakeChatModel(responses=["x"]),
+        ),
     )
     parent = LoadedAgent(
         name="root",
@@ -81,7 +97,9 @@ async def test_subagent_sandbox_tools_are_resolved():
         spec=define_agent(model=FakeChatModel(responses=["x"])),
         subagents=(sub,),
     )
-    config = LeveConfig(project_dir=_Path("."), sandbox=SandboxConfig(adapter="subprocess"))
+    config = LeveConfig(
+        project_dir=_Path("."), sandbox=SandboxConfig(adapter="subprocess")
+    )
     async with AsyncExitStack() as stack:
         mapping = await _resolve_extra_tools(parent, config, stack)
         assert "run_shell" in [t.name for t in mapping[id(sub)]]
@@ -98,20 +116,35 @@ async def test_subagent_interrupt_is_reported_not_swallowed():
     sub = LoadedAgent(
         name="runner",
         path=Path("."),
-        spec=define_agent(model=FakeChatModel(responses=[
-            AIMessage(content="", tool_calls=[{"name": "act", "args": {}, "id": "s1"}]),
-            "unreached",
-        ]), description="Runs."),
+        spec=define_agent(
+            model=FakeChatModel(
+                responses=[
+                    AIMessage(
+                        content="", tool_calls=[{"name": "act", "args": {}, "id": "s1"}]
+                    ),
+                    "unreached",
+                ]
+            ),
+            description="Runs.",
+        ),
         tools=(act,),
     )
     parent_model = FakeChatModel(
         responses=[
-            AIMessage(content="", tool_calls=[{"name": "delegate_to_runner", "args": {"task": "do"}, "id": "c1"}]),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {"name": "delegate_to_runner", "args": {"task": "do"}, "id": "c1"}
+                ],
+            ),
             "parent done",
         ]
     )
     parent = LoadedAgent(
-        name="root", path=Path("."), spec=define_agent(model=parent_model), subagents=(sub,)
+        name="root",
+        path=Path("."),
+        spec=define_agent(model=parent_model),
+        subagents=(sub,),
     )
 
     async with runtime_for(parent) as rt:

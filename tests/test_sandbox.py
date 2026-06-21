@@ -103,7 +103,9 @@ async def test_output_is_truncated():
 
 
 def test_factory_resolves_subprocess():
-    assert isinstance(create_sandbox(SandboxConfig(adapter="subprocess")), SubprocessSandbox)
+    assert isinstance(
+        create_sandbox(SandboxConfig(adapter="subprocess")), SubprocessSandbox
+    )
 
 
 def test_factory_rejects_unimplemented_adapter():

@@ -31,7 +31,11 @@ def turn_end(
 
 
 def approval_requested(session_id: str, interrupt: dict[str, Any]) -> dict[str, Any]:
-    return {"type": "approval.requested", "session_id": session_id, "interrupt": interrupt}
+    return {
+        "type": "approval.requested",
+        "session_id": session_id,
+        "interrupt": interrupt,
+    }
 
 
 def error(message: str) -> dict[str, Any]:

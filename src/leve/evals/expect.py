@@ -8,7 +8,7 @@ matcher)``. Keeping matchers as plain predicates means model-graded scorers
 from __future__ import annotations
 
 import re
-from typing import Callable
+from collections.abc import Callable
 
 Matcher = Callable[[str], bool]
 

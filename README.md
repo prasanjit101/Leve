@@ -1,5 +1,9 @@
 # Leve
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![CI](https://github.com/prasanjit101/Leve/actions/workflows/ci.yml/badge.svg)](https://github.com/prasanjit101/Leve/actions/workflows/ci.yml)
+
 **A filesystem-first, durable agent framework built on LangGraph.**
 
 You describe an agent as a _directory of files_. Leve compiles that directory
@@ -32,3 +36,15 @@ uv run leve build        # compile & validate without serving
 uv run leve eval         # run eval suites (CI gate)
 uv run leve deploy       # emit deploy artifacts
 ```
+
+## Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, development workflow, and coding standards.
+
+## Code of Conduct
+
+Everyone participating in the Leve community is expected to follow our [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## License
+
+Leve is released under the [MIT License](LICENSE).

@@ -23,13 +23,17 @@ agent = define_agent(model=FakeChatModel(responses=["hi"]))
 
 
 def test_define_mcp_connection():
-    conn = define_mcp_connection(url="https://mcp.linear.app/sse", transport="sse", description="Linear")
+    conn = define_mcp_connection(
+        url="https://mcp.linear.app/sse", transport="sse", description="Linear"
+    )
     assert conn.kind == "mcp"
     assert conn.config == {"url": "https://mcp.linear.app/sse", "transport": "sse"}
 
 
 def test_define_openapi_connection():
-    conn = define_openapi_connection(spec={"paths": {}}, base_url="https://api.x", description="X")
+    conn = define_openapi_connection(
+        spec={"paths": {}}, base_url="https://api.x", description="X"
+    )
     assert conn.kind == "openapi"
     assert conn.config["base_url"] == "https://api.x"
 
@@ -38,7 +42,9 @@ def test_namespacing_is_non_mutating():
     class In(BaseModel):
         pass
 
-    tool = StructuredTool.from_function(func=lambda: "x", name="create_issue", description="d", args_schema=In)
+    tool = StructuredTool.from_function(
+        func=lambda: "x", name="create_issue", description="d", args_schema=In
+    )
     nt = namespaced(tool, "linear")
     assert nt.name == "linear.create_issue"
     assert tool.name == "create_issue"  # original untouched
@@ -52,8 +58,17 @@ def test_openapi_tool_generation():
                     "operationId": "get_item",
                     "summary": "Get an item",
                     "parameters": [
-                        {"name": "id", "in": "path", "required": True, "schema": {"type": "string"}},
-                        {"name": "verbose", "in": "query", "schema": {"type": "boolean"}},
+                        {
+                            "name": "id",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "string"},
+                        },
+                        {
+                            "name": "verbose",
+                            "in": "query",
+                            "schema": {"type": "boolean"},
+                        },
                     ],
                 }
             }
@@ -69,12 +84,20 @@ def test_openapi_resolves_ref_parameters():
     spec = {
         "components": {
             "parameters": {
-                "Id": {"name": "id", "in": "path", "required": True, "schema": {"type": "string"}}
+                "Id": {
+                    "name": "id",
+                    "in": "path",
+                    "required": True,
+                    "schema": {"type": "string"},
+                }
             }
         },
         "paths": {
             "/items/{id}": {
-                "get": {"operationId": "get_item", "parameters": [{"$ref": "#/components/parameters/Id"}]}
+                "get": {
+                    "operationId": "get_item",
+                    "parameters": [{"$ref": "#/components/parameters/Id"}],
+                }
             }
         },
     }
@@ -89,13 +112,20 @@ def test_openapi_header_param_is_routed_and_required():
                 "get": {
                     "operationId": "getx",
                     "parameters": [
-                        {"name": "X-Key", "in": "header", "required": True, "schema": {"type": "string"}}
+                        {
+                            "name": "X-Key",
+                            "in": "header",
+                            "required": True,
+                            "schema": {"type": "string"},
+                        }
                     ],
                 }
             }
         }
     }
-    schema = build_openapi_tools(spec, base_url="https://api.x")[0].args_schema.model_json_schema()
+    schema = build_openapi_tools(spec, base_url="https://api.x")[
+        0
+    ].args_schema.model_json_schema()
     assert "X-Key" in schema["properties"]
     assert "X-Key" in schema.get("required", [])
 
@@ -135,7 +165,10 @@ async def test_discover_mcp_namespaces_tools(monkeypatch):
     monkeypatch.setattr(client_mod, "MultiServerMCPClient", FakeClient)
 
     spec = ConnectionSpec(
-        kind="mcp", description="d", config={"url": "x", "transport": "sse"}, name="linear"
+        kind="mcp",
+        description="d",
+        config={"url": "x", "transport": "sse"},
+        name="linear",
     )
     tools = await discover_tools((spec,))
     assert [t.name for t in tools] == ["linear.create_issue"]

@@ -55,6 +55,8 @@ dev = [
     "pytest>=8.3.4",
     "pytest-asyncio>=0.25.2",
     "anyio>=4.8.0",
+    "ruff>=0.4.10",
+    "pre-commit>=3.7.1",
 ]
 
 [build-system]
@@ -72,3 +74,19 @@ addopts = "-q"
 
 [tool.uv]
 package = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = [
+    "E501",  # Line too long (handled by formatter)
+    "B008",  # Do not perform function call in argument defaults (used for dependency injection sentinels)
+    "B023",  # Function definition does not bind loop variable (used intentionally for latest state)
+    "B027",  # Empty method in abstract base class
+    "UP047", # Generic function should use type parameters (PEP 695 style)
+    "B905",  # zip() without strict= parameter
+    "UP042", # Class inherits from both str and Enum (StrEnum is 3.11+)
+]

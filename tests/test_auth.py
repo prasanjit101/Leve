@@ -9,7 +9,6 @@ from pydantic import BaseModel
 from leve.auth import (
     InjectedPrincipal,
     Principal,
-    anonymous,
     app_principal,
     with_broker,
 )
@@ -21,7 +20,6 @@ from leve.credentials import (
 )
 from leve.tools import define_tool
 from tests.conftest import collect, runtime_for
-
 
 # --- Principal + brokers ---------------------------------------------------
 
@@ -54,7 +52,9 @@ def test_narrow_cannot_widen_existing_value():
 
 def test_narrow_cannot_replace_scalar():
     principal = Principal(subject="u1", claims={"tier": "basic"})
-    assert principal.narrow(claims={"tier": "enterprise"}).claims == {}  # mismatch dropped
+    assert (
+        principal.narrow(claims={"tier": "enterprise"}).claims == {}
+    )  # mismatch dropped
 
 
 async def test_oauth_store_consent_then_resolve():
@@ -71,8 +71,11 @@ async def test_oauth_store_consent_then_resolve():
 
 async def test_token_exchange_reads_private_secrets():
     # Secret tokens live in the private `secrets` field, never in `claims`.
-    principal = Principal(subject="u1", secrets={"audience_tokens": {"warehouse": "wh-tok"}},
-                          broker=TokenExchangeBroker())
+    principal = Principal(
+        subject="u1",
+        secrets={"audience_tokens": {"warehouse": "wh-tok"}},
+        broker=TokenExchangeBroker(),
+    )
     assert (await principal.credential("warehouse")).token == "wh-tok"
     assert "wh-tok" not in repr(principal)  # not exposed via repr/tracing
 
@@ -136,17 +139,25 @@ async def test_tool_receives_injected_principal(make_loaded):
 
     model = FakeChatModel(
         responses=[
-            AIMessage(content="", tool_calls=[{"name": "whoami", "args": {}, "id": "c1"}]),
+            AIMessage(
+                content="", tool_calls=[{"name": "whoami", "args": {}, "id": "c1"}]
+            ),
             "done",
         ]
     )
     loaded = make_loaded(model, tools=(_whoami_tool(),))
     async with runtime_for(loaded) as rt:
         events = await collect(
-            rt.run(rt.new_session_id(), "who am i", context=LeveContext(principal=Principal(subject="alice")))
+            rt.run(
+                rt.new_session_id(),
+                "who am i",
+                context=LeveContext(principal=Principal(subject="alice")),
+            )
         )
     results = [e for e in events if e["type"] == "tool.result"]
-    assert results and results[0]["output"] == "alice"  # filled from context, not the model
+    assert (
+        results and results[0]["output"] == "alice"
+    )  # filled from context, not the model
 
 
 async def test_consent_interrupt_then_resume(make_loaded):
@@ -162,7 +173,10 @@ async def test_consent_interrupt_then_resume(make_loaded):
 
     model = FakeChatModel(
         responses=[
-            AIMessage(content="", tool_calls=[{"name": "create_issue", "args": {}, "id": "c1"}]),
+            AIMessage(
+                content="",
+                tool_calls=[{"name": "create_issue", "args": {}, "id": "c1"}],
+            ),
             "done",
         ]
     )
@@ -202,10 +216,15 @@ async def test_subagent_inherits_parent_principal(make_loaded):
         name="helper",
         path=Path("."),
         spec=define_agent(
-            model=FakeChatModel(responses=[
-                AIMessage(content="", tool_calls=[{"name": "capture", "args": {}, "id": "s1"}]),
-                "sub done",
-            ]),
+            model=FakeChatModel(
+                responses=[
+                    AIMessage(
+                        content="",
+                        tool_calls=[{"name": "capture", "args": {}, "id": "s1"}],
+                    ),
+                    "sub done",
+                ]
+            ),
             description="Helps.",
         ),
         tools=(capture,),
@@ -213,14 +232,33 @@ async def test_subagent_inherits_parent_principal(make_loaded):
     parent = LoadedAgent(
         name="root",
         path=Path("."),
-        spec=define_agent(model=FakeChatModel(responses=[
-            AIMessage(content="", tool_calls=[{"name": "delegate_to_helper", "args": {"task": "who"}, "id": "c1"}]),
-            "parent done",
-        ])),
+        spec=define_agent(
+            model=FakeChatModel(
+                responses=[
+                    AIMessage(
+                        content="",
+                        tool_calls=[
+                            {
+                                "name": "delegate_to_helper",
+                                "args": {"task": "who"},
+                                "id": "c1",
+                            }
+                        ],
+                    ),
+                    "parent done",
+                ]
+            )
+        ),
         subagents=(sub,),
     )
 
     async with runtime_for(parent) as rt:
-        await collect(rt.run(rt.new_session_id(), "go", context=LeveContext(principal=Principal(subject="bob"))))
+        await collect(
+            rt.run(
+                rt.new_session_id(),
+                "go",
+                context=LeveContext(principal=Principal(subject="bob")),
+            )
+        )
 
     assert seen == ["bob"]  # the subagent's tool received the parent's principal

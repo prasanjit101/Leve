@@ -65,17 +65,23 @@ async def test_schedule_runs_under_app_principal(make_loaded):
 
     @define_tool(description="Record the caller.")
     async def whoami(principal: Principal = InjectedPrincipal()) -> str:
-        seen.append((principal.subject, principal.claims.get("app")) if principal else None)
+        seen.append(
+            (principal.subject, principal.claims.get("app")) if principal else None
+        )
         return "ok"
 
     @define_schedule(cron="@daily")
     async def nightly(ctx):
         await ctx.receive(message="run")
 
-    model = FakeChatModel(responses=[
-        AIMessage(content="", tool_calls=[{"name": "whoami", "args": {}, "id": "s1"}]),
-        "done",
-    ])
+    model = FakeChatModel(
+        responses=[
+            AIMessage(
+                content="", tool_calls=[{"name": "whoami", "args": {}, "id": "s1"}]
+            ),
+            "done",
+        ]
+    )
     loaded = make_loaded(model, tools=(whoami,))
     async with runtime_for(loaded) as rt:
         await run_schedule(nightly, rt)

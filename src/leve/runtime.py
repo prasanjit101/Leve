@@ -31,4 +31,4 @@ class LeveContext:
 
     template_vars: dict[str, Any] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
-    principal: "Principal | None" = None
+    principal: Principal | None = None

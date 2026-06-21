@@ -15,9 +15,10 @@ context (not model state), so the model can never talk its way past the gate.
 from __future__ import annotations
 
 import inspect
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from types import SimpleNamespace
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 from langchain.agents.middleware import AgentMiddleware, ToolCallRequest
 from langchain_core.messages import ToolMessage
@@ -59,7 +60,11 @@ class ApprovalMiddleware(AgentMiddleware):
 
         if policy is not None and self._needs_approval(policy, call, request):
             decision = interrupt(
-                {"type": "approval", "tool": call["name"], "input": call.get("args", {})}
+                {
+                    "type": "approval",
+                    "tool": call["name"],
+                    "input": call.get("args", {}),
+                }
             )
             if not _is_approved(decision):
                 return ToolMessage(

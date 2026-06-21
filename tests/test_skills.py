@@ -48,7 +48,9 @@ def test_parse_skill_rejects_non_dict_frontmatter(tmp_path):
 
 
 def test_load_skill_tool():
-    tool = make_load_skill_tool((SkillSpec("revenue", "Revenue rules.", "Net of refunds."),))
+    tool = make_load_skill_tool(
+        (SkillSpec("revenue", "Revenue rules.", "Net of refunds."),)
+    )
     assert tool.name == "load_skill"
     assert "revenue" in tool.description  # catalog exposed up front
     assert tool.invoke({"name": "revenue"}) == "Net of refunds."

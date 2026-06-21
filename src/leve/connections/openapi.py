@@ -44,8 +44,12 @@ def build_openapi_tools(
             operation = path_item.get(method)
             if not operation:
                 continue
-            params = shared + [_resolve(p, spec) for p in operation.get("parameters", [])]
-            tool = _build_tool(path, method, operation, params, base_url, headers, headers_provider)
+            params = shared + [
+                _resolve(p, spec) for p in operation.get("parameters", [])
+            ]
+            tool = _build_tool(
+                path, method, operation, params, base_url, headers, headers_provider
+            )
             tool = _dedupe(tool, seen)
             tools.append(tool)
     return tools
@@ -60,12 +64,16 @@ def _build_tool(
     headers: dict[str, str] | None,
     headers_provider: Any,
 ) -> BaseTool:
-    name = operation.get("operationId") or f"{method}_{path.strip('/').replace('/', '_')}"
+    name = (
+        operation.get("operationId") or f"{method}_{path.strip('/').replace('/', '_')}"
+    )
     description = operation.get("summary") or operation.get("description") or name
     has_body = "requestBody" in operation
 
-    by_loc = {loc: {p["name"] for p in params if p.get("in") == loc and "name" in p}
-              for loc in ("path", "query", "header")}
+    by_loc = {
+        loc: {p["name"] for p in params if p.get("in") == loc and "name" in p}
+        for loc in ("path", "query", "header")
+    }
     args_model = _args_model(name, params, has_body)
 
     async def call(**kwargs: Any) -> dict:
@@ -80,7 +88,11 @@ def _build_tool(
         body = kwargs.get("body")
         async with httpx.AsyncClient() as client:
             response = await client.request(
-                method.upper(), url, params=query, json=body, headers=req_headers or None
+                method.upper(),
+                url,
+                params=query,
+                json=body,
+                headers=req_headers or None,
             )
             return {"status": response.status_code, "body": _safe_json(response)}
 
@@ -98,7 +110,10 @@ def _args_model(name: str, params: list[dict], has_body: bool) -> type[BaseModel
         # Path params are always required for a valid URL, regardless of the spec.
         required = param.get("required", False) or param.get("in") == "path"
         if required:
-            fields[param["name"]] = (py_type, Field(..., description=param.get("description", "")))
+            fields[param["name"]] = (
+                py_type,
+                Field(..., description=param.get("description", "")),
+            )
         else:
             fields[param["name"]] = (
                 py_type | None,

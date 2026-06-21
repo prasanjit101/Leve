@@ -34,7 +34,9 @@ def echo(text: str) -> str:
 
 
 def _parse_sse(text: str) -> list[dict]:
-    return [json.loads(line[6:]) for line in text.splitlines() if line.startswith("data: ")]
+    return [
+        json.loads(line[6:]) for line in text.splitlines() if line.startswith("data: ")
+    ]
 
 
 @asynccontextmanager
@@ -42,7 +44,9 @@ async def _client(config):
     app = create_app(config)
     async with app.router.lifespan_context(app):
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://test"
+        ) as client:
             yield client
 
 
@@ -61,8 +65,12 @@ async def test_full_message_flow(tmp_path, write_project):
         assert types[0] == "turn.start"
         assert types[-1] == "turn.end"
         assert any(e["type"] == "tool.call" and e["tool"] == "echo" for e in events)
-        assert any(e["type"] == "tool.result" and e["output"] == "echo:hi" for e in events)
-        assert any(e.get("text") == "all done" for e in events if e["type"] == "model.message")
+        assert any(
+            e["type"] == "tool.result" and e["output"] == "echo:hi" for e in events
+        )
+        assert any(
+            e.get("text") == "all done" for e in events if e["type"] == "model.message"
+        )
 
         state = (await client.get(f"{API_PREFIX}/session/{sid}")).json()
         assert state["messages"][-1]["content"] == "all done"

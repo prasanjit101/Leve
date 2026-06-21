@@ -45,7 +45,9 @@ def test_dockerfile_does_not_hardcode_a_backend():
 
 
 def test_dockerfile_installs_postgres_extra_when_selected():
-    config = _config(persistence=PersistenceConfig(checkpointer="postgres", postgres_url="x"))
+    config = _config(
+        persistence=PersistenceConfig(checkpointer="postgres", postgres_url="x")
+    )
     out = dockerfile(config, _loaded())
     assert "postgres" in out  # the extra is installed so psycopg is present
 
@@ -67,7 +69,9 @@ def test_dockerfile_omits_microsandbox_extra_for_subprocess():
 
 def test_dockerfile_installs_discord_extra_when_channel_present():
     config = _config(sandbox=SandboxConfig(adapter="subprocess"))
-    out = dockerfile(config, _loaded(channels=(ChannelSpec(adapter=None, name="discord"),)))
+    out = dockerfile(
+        config, _loaded(channels=(ChannelSpec(adapter=None, name="discord"),))
+    )
     assert "discord" in out
 
 
@@ -103,7 +107,9 @@ def test_crontab_lines():
 
 
 def test_platform_target_emits_langgraph_json(tmp_path):
-    config = LeveConfig(project_dir=tmp_path, deploy=DeployConfig(target="langgraph-platform"))
+    config = LeveConfig(
+        project_dir=tmp_path, deploy=DeployConfig(target="langgraph-platform")
+    )
     written, warnings = write_deploy_artifacts(config, _loaded())
     names = {p.name for p in written}
     assert names == {"langgraph.json"}  # no stray Dockerfile
@@ -122,6 +128,10 @@ def test_docker_target_emits_dockerfile_and_crontab(tmp_path):
 
 
 def test_platform_with_channels_warns(tmp_path):
-    config = LeveConfig(project_dir=tmp_path, deploy=DeployConfig(target="langgraph-platform"))
-    _, warnings = write_deploy_artifacts(config, _loaded(channels=(ChannelSpec(adapter=None, name="slack"),)))
+    config = LeveConfig(
+        project_dir=tmp_path, deploy=DeployConfig(target="langgraph-platform")
+    )
+    _, warnings = write_deploy_artifacts(
+        config, _loaded(channels=(ChannelSpec(adapter=None, name="slack"),))
+    )
     assert warnings and "Channels" in warnings[0]

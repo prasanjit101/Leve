@@ -67,7 +67,14 @@ class TracingConfig:
 
 # Sandbox adapters by isolation tier (SPEC §5.2). microsandbox is the default;
 # subprocess is the no-isolation dev escape hatch.
-_SANDBOX_ADAPTERS = {"microsandbox", "subprocess", "os_native", "docker", "e2b", "modal"}
+_SANDBOX_ADAPTERS = {
+    "microsandbox",
+    "subprocess",
+    "os_native",
+    "docker",
+    "e2b",
+    "modal",
+}
 
 
 @dataclass(frozen=True)
@@ -213,13 +220,17 @@ def _parse_config(path: Path) -> LeveConfig:
         root=agent.get("root", "agent"),
         default_model=agent.get("default_model", LeveConfig.default_model),
         persistence=PersistenceConfig(
-            checkpointer=persistence.get("checkpointer", PersistenceConfig.checkpointer),
+            checkpointer=persistence.get(
+                "checkpointer", PersistenceConfig.checkpointer
+            ),
             store=persistence.get("store", PersistenceConfig.store),
             sqlite_path=persistence.get("sqlite_path", PersistenceConfig.sqlite_path),
             store_sqlite_path=persistence.get(
                 "store_sqlite_path", PersistenceConfig.store_sqlite_path
             ),
-            postgres_url=persistence.get("postgres_url", PersistenceConfig.postgres_url),
+            postgres_url=persistence.get(
+                "postgres_url", PersistenceConfig.postgres_url
+            ),
         ),
         tracing=TracingConfig(
             provider=tracing.get("provider", TracingConfig.provider),
@@ -234,10 +245,14 @@ def _parse_config(path: Path) -> LeveConfig:
                 disk_mb=limits.get("disk_mb", SandboxLimits.disk_mb),
                 network=limits.get("network", SandboxLimits.network),
                 network_allow=tuple(limits.get("network_allow", ())),
-                max_output_bytes=limits.get("max_output_bytes", SandboxLimits.max_output_bytes),
+                max_output_bytes=limits.get(
+                    "max_output_bytes", SandboxLimits.max_output_bytes
+                ),
             ),
         ),
-        credentials=CredentialsConfig(broker=credentials.get("broker", CredentialsConfig.broker)),
+        credentials=CredentialsConfig(
+            broker=credentials.get("broker", CredentialsConfig.broker)
+        ),
         deploy=DeployConfig(
             target=deploy.get("target", DeployConfig.target),
             base_url=deploy.get("base_url", DeployConfig.base_url),

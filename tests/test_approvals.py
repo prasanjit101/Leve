@@ -28,7 +28,10 @@ def _gated_tool():
 def _model_calling(sql: str, final: str) -> FakeChatModel:
     return FakeChatModel(
         responses=[
-            AIMessage(content="", tool_calls=[{"name": "run_sql", "args": {"sql": sql}, "id": "c1"}]),
+            AIMessage(
+                content="",
+                tool_calls=[{"name": "run_sql", "args": {"sql": sql}, "id": "c1"}],
+            ),
             final,
         ]
     )
@@ -42,12 +45,18 @@ async def test_approval_pauses_then_resumes_approved(make_loaded):
 
         assert any(e["type"] == "approval.requested" for e in events)
         assert events[-1] == {
-            "type": "turn.end", "session_id": sid, "interrupted": True, "errored": False
+            "type": "turn.end",
+            "session_id": sid,
+            "interrupted": True,
+            "errored": False,
         }
         assert not any(e["type"] == "tool.result" for e in events)  # not executed yet
 
         resumed = await collect(rt.resume(sid, {"approved": True}))
-        assert any(e["type"] == "tool.result" and e["output"] == "ran:DROP TABLE x" for e in resumed)
+        assert any(
+            e["type"] == "tool.result" and e["output"] == "ran:DROP TABLE x"
+            for e in resumed
+        )
         state = await rt.get_state(sid)
         assert state["messages"][-1]["content"] == "done"
 
@@ -60,7 +69,11 @@ async def test_approval_denied_returns_denial(make_loaded):
         await collect(rt.resume(sid, {"approved": False}))
 
         state = await rt.get_state(sid)
-        denied = [m for m in state["messages"] if m["type"] == "tool" and "denied" in str(m["content"])]
+        denied = [
+            m
+            for m in state["messages"]
+            if m["type"] == "tool" and "denied" in str(m["content"])
+        ]
         assert denied
 
 
@@ -71,7 +84,9 @@ async def test_non_gated_input_runs_without_approval(make_loaded):
         events = await collect(rt.run(sid, "go"))
 
         assert not any(e["type"] == "approval.requested" for e in events)
-        assert any(e["type"] == "tool.result" and e["output"] == "ran:SELECT 1" for e in events)
+        assert any(
+            e["type"] == "tool.result" and e["output"] == "ran:SELECT 1" for e in events
+        )
 
 
 async def test_multiple_gated_calls_resume_by_broadcast(make_loaded):
@@ -109,13 +124,21 @@ async def test_gate_without_input_schema(make_loaded):
 
     from langchain_core.messages import AIMessage
 
-    @define_tool(description="Write a file.", needs_approval=lambda ti: ti.path.startswith("/etc"))
+    @define_tool(
+        description="Write a file.",
+        needs_approval=lambda ti: ti.path.startswith("/etc"),
+    )
     def write_file(path: str) -> str:
         return f"wrote:{path}"
 
     model = FakeChatModel(
         responses=[
-            AIMessage(content="", tool_calls=[{"name": "write_file", "args": {"path": "/etc/x"}, "id": "c1"}]),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {"name": "write_file", "args": {"path": "/etc/x"}, "id": "c1"}
+                ],
+            ),
             "done",
         ]
     )
@@ -141,7 +164,12 @@ async def test_predicate_error_fails_closed(make_loaded):
 
     model = FakeChatModel(
         responses=[
-            AIMessage(content="", tool_calls=[{"name": "run_sql", "args": {"sql": "SELECT 1"}, "id": "c1"}]),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {"name": "run_sql", "args": {"sql": "SELECT 1"}, "id": "c1"}
+                ],
+            ),
             "done",
         ]
     )
@@ -161,7 +189,10 @@ async def test_malformed_args_recover_via_tool_node(make_loaded):
     model = FakeChatModel(
         responses=[
             # Missing required 'sql' field.
-            AIMessage(content="", tool_calls=[{"name": "run_sql", "args": {"wrong": "x"}, "id": "c1"}]),
+            AIMessage(
+                content="",
+                tool_calls=[{"name": "run_sql", "args": {"wrong": "x"}, "id": "c1"}],
+            ),
             "recovered",
         ]
     )

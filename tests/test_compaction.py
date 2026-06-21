@@ -45,6 +45,8 @@ def test_string_compaction_model_is_resolved():
     """A provider-string summary model is resolved so its profile is honoured."""
 
     model = FakeChatModel(responses=["x"])
-    spec = define_agent(model=model, compaction=CompactionConfig(model="anthropic:claude-opus-4-8"))
+    spec = define_agent(
+        model=model, compaction=CompactionConfig(model="anthropic:claude-opus-4-8")
+    )
     middleware = _build_middleware(_loaded(spec), model)  # must not raise
     assert any(isinstance(m, SummarizationMiddleware) for m in middleware)

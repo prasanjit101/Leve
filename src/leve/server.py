@@ -15,8 +15,9 @@ import hmac
 import json
 import logging
 import os
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager, suppress
-from typing import Any, AsyncIterator, Callable
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -189,7 +190,7 @@ def _sse(events: AsyncIterator[dict[str, Any]]) -> AsyncIterator[bytes]:
     async def gen() -> AsyncIterator[bytes]:
         async for event in events:
             payload = json.dumps(event, default=str)
-            yield f"data: {payload}\n\n".encode("utf-8")
+            yield f"data: {payload}\n\n".encode()
 
     return gen()
 
@@ -234,7 +235,9 @@ def create_app(config: LeveConfig) -> FastAPI:
             session_id,
             lambda: manager.runtime.run(session_id, body.message, context=context),
         )
-        return StreamingResponse(_sse(broker.subscribe()), media_type="text/event-stream")
+        return StreamingResponse(
+            _sse(broker.subscribe()), media_type="text/event-stream"
+        )
 
     @app.post(f"{API_PREFIX}/session/{{session_id}}/resume")
     async def resume_session(
@@ -245,12 +248,16 @@ def create_app(config: LeveConfig) -> FastAPI:
         _require_idle(manager, session_id)
         # Re-supply the caller principal on resume (runtime context isn't
         # checkpointed): without it a resumed/consent turn would lose identity.
-        context = LeveContext(principal=with_broker(anonymous(), manager.runtime.broker))
+        context = LeveContext(
+            principal=with_broker(anonymous(), manager.runtime.broker)
+        )
         broker = manager.start(
             session_id,
             lambda: manager.runtime.resume(session_id, body.value, context=context),
         )
-        return StreamingResponse(_sse(broker.subscribe()), media_type="text/event-stream")
+        return StreamingResponse(
+            _sse(broker.subscribe()), media_type="text/event-stream"
+        )
 
     @app.get(f"{API_PREFIX}/session/{{session_id}}/stream")
     async def stream_session(session_id: str, request: Request) -> StreamingResponse:
@@ -259,7 +266,11 @@ def create_app(config: LeveConfig) -> FastAPI:
         # Attach only to an in-flight turn. Between turns there is no broker
         # (it is released when the turn ends), so an idle session streams nothing
         # rather than replaying the previous turn's buffered transcript.
-        broker = manager.current_broker(session_id) if manager.is_active(session_id) else None
+        broker = (
+            manager.current_broker(session_id)
+            if manager.is_active(session_id)
+            else None
+        )
         events: AsyncIterator[dict] = broker.subscribe() if broker else _empty()
         return StreamingResponse(_sse(events), media_type="text/event-stream")
 

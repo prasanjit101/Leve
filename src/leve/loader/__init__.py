@@ -42,7 +42,7 @@ class LoadedAgent:
     connections: tuple[ConnectionSpec, ...] = field(default_factory=tuple)
     channels: tuple[ChannelSpec, ...] = field(default_factory=tuple)
     schedules: tuple[ScheduleSpec, ...] = field(default_factory=tuple)
-    subagents: tuple["LoadedAgent", ...] = field(default_factory=tuple)
+    subagents: tuple[LoadedAgent, ...] = field(default_factory=tuple)
 
 
 def load_agent(agent_dir: Path, config: LeveConfig) -> LoadedAgent:
@@ -116,7 +116,9 @@ def _load_dir(agent_dir: Path, root: str, config: LeveConfig) -> LoadedAgent:
     )
 
 
-def _load_subagents(subagents_dir: Path, root: str, config: LeveConfig) -> list[LoadedAgent]:
+def _load_subagents(
+    subagents_dir: Path, root: str, config: LeveConfig
+) -> list[LoadedAgent]:
     if not subagents_dir.is_dir():
         return []
     loaded: list[LoadedAgent] = []
@@ -167,7 +169,9 @@ def _load_connections(
     root: str, project_dir: Path, connections_dir: Path
 ) -> list[ConnectionSpec]:
     # The file name is the connection's namespace prefix (linear.<tool>).
-    return _collect_named(root, project_dir, connections_dir, ConnectionSpec, "connection")
+    return _collect_named(
+        root, project_dir, connections_dir, ConnectionSpec, "connection"
+    )
 
 
 def _collect_named(root, project_dir, directory, type_, label):
@@ -204,9 +208,7 @@ def _collect_typed(root, project_dir, directory, type_, label):
 def _markdown_files(directory: Path) -> list[Path]:
     if not directory.is_dir():
         return []
-    return sorted(
-        p for p in directory.iterdir() if p.is_file() and p.suffix == ".md"
-    )
+    return sorted(p for p in directory.iterdir() if p.is_file() and p.suffix == ".md")
 
 
 __all__ = ["LoadedAgent", "load_agent", "load_project"]

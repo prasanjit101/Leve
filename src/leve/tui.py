@@ -55,7 +55,9 @@ class LeveTUI:
         while True:
             try:
                 # Read input off the event loop so it never blocks streaming.
-                raw = await asyncio.to_thread(self.console.input, "[bold cyan]you[/bold cyan] ")
+                raw = await asyncio.to_thread(
+                    self.console.input, "[bold cyan]you[/bold cyan] "
+                )
             except (EOFError, KeyboardInterrupt):
                 break
             text = raw.strip()
@@ -72,7 +74,9 @@ class LeveTUI:
             async with client.stream("POST", url, json={"message": text}) as resp:
                 if resp.status_code != 200:
                     body = (await resp.aread()).decode()
-                    self.console.print(f"[red]error {resp.status_code}: {escape(body)}[/red]")
+                    self.console.print(
+                        f"[red]error {resp.status_code}: {escape(body)}[/red]"
+                    )
                     return
                 async for line in resp.aiter_lines():
                     if line.startswith("data: "):
@@ -81,7 +85,7 @@ class LeveTUI:
             state.end_stream(self.console)
             self.console.print(f"[red]stream failed: {escape(str(exc))}[/red]")
 
-    def _render(self, event: dict, state: "_TurnState") -> None:
+    def _render(self, event: dict, state: _TurnState) -> None:
         kind = event.get("type")
         if kind == "model.delta":
             state.delta(self.console, event.get("text", ""))
@@ -89,7 +93,9 @@ class LeveTUI:
             # Reliable full output. If tokens already streamed, they are the
             # message — don't print it twice.
             if not state.streamed:
-                self.console.print("[bold green]agent[/bold green] " + escape(event.get("text", "")))
+                self.console.print(
+                    "[bold green]agent[/bold green] " + escape(event.get("text", ""))
+                )
         elif kind == "tool.call":
             state.end_stream(self.console)
             self.console.print(

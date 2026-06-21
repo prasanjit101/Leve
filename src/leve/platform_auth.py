@@ -12,7 +12,8 @@ without the SDK; ``make_auth`` is called only in a Platform deployment.
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from leve.auth import Principal
 
@@ -42,7 +43,9 @@ def make_auth(authenticate: Callable[[dict], Principal]) -> Any:
     auth = Auth()
 
     @auth.authenticate
-    async def _authenticate(headers: dict, **_: Any):  # pragma: no cover - Platform path
+    async def _authenticate(
+        headers: dict, **_: Any
+    ):  # pragma: no cover - Platform path
         principal = authenticate(headers)
         # The identity dict langgraph stores; the owner filter below reads it.
         return {

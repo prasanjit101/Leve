@@ -15,8 +15,8 @@ nothing open.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
@@ -44,9 +44,7 @@ async def open_checkpointer(config: LeveConfig) -> AsyncIterator[BaseCheckpointS
             yield saver
     elif kind == "postgres":
         AsyncPostgresSaver = _require_postgres("AsyncPostgresSaver")
-        async with AsyncPostgresSaver.from_conn_string(
-            _postgres_url(config)
-        ) as saver:
+        async with AsyncPostgresSaver.from_conn_string(_postgres_url(config)) as saver:
             await saver.setup()
             yield saver
     else:  # pragma: no cover - validate() rejects unknown kinds earlier

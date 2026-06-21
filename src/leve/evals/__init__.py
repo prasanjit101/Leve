@@ -9,8 +9,9 @@ runtime (so model state and threads don't leak between evals). Assertions raise
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 from leve.evals.expect import Matcher
 from leve.session import AgentRuntime, extract_reply
@@ -24,7 +25,7 @@ class EvalSpec:
 
     name: str
     description: str
-    func: Callable[["EvalContext"], Awaitable[None]]
+    func: Callable[[EvalContext], Awaitable[None]]
 
 
 @dataclass(frozen=True)
@@ -39,7 +40,7 @@ class EvalResult:
 def define_eval(*, description: str = "", name: str | None = None):
     """Mark an async function as an eval (SPEC §7)."""
 
-    def wrap(func: Callable[["EvalContext"], Awaitable[None]]) -> EvalSpec:
+    def wrap(func: Callable[[EvalContext], Awaitable[None]]) -> EvalSpec:
         return EvalSpec(name=name or func.__name__, description=description, func=func)
 
     return wrap
@@ -53,10 +54,12 @@ class EvalContext:
         self._session_id = runtime.new_session_id()
         self._turn: list[dict[str, Any]] = []
 
-    async def send(self, message: str) -> "EvalContext":
+    async def send(self, message: str) -> EvalContext:
         """Send a message and capture the resulting turn's events."""
 
-        self._turn = [event async for event in self._runtime.run(self._session_id, message)]
+        self._turn = [
+            event async for event in self._runtime.run(self._session_id, message)
+        ]
         return self
 
     @property
@@ -93,7 +96,9 @@ class EvalContext:
     def no_errors(self) -> None:
         """Assert no error events occurred in the last turn."""
 
-        assert not any(e["type"] == "error" for e in self._turn), "turn produced an error"
+        assert not any(e["type"] == "error" for e in self._turn), (
+            "turn produced an error"
+        )
 
     def check(self, value: str, matcher: Matcher) -> None:
         """Assert ``matcher(value)`` holds."""
@@ -107,7 +112,11 @@ async def run_eval(spec: EvalSpec, runtime: AgentRuntime) -> EvalResult:
     try:
         await spec.func(EvalContext(runtime))
     except AssertionError as exc:
-        return EvalResult(name=spec.name, passed=False, error=str(exc) or "assertion failed")
+        return EvalResult(
+            name=spec.name, passed=False, error=str(exc) or "assertion failed"
+        )
     except Exception as exc:  # an unexpected error is also a failure
-        return EvalResult(name=spec.name, passed=False, error=f"{type(exc).__name__}: {exc}")
+        return EvalResult(
+            name=spec.name, passed=False, error=f"{type(exc).__name__}: {exc}"
+        )
     return EvalResult(name=spec.name, passed=True)

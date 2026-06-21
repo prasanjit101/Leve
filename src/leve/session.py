@@ -12,7 +12,8 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 from langchain_core.messages import BaseMessage, HumanMessage
 from langgraph.graph.state import CompiledStateGraph
@@ -29,7 +30,9 @@ logger = logging.getLogger("leve.session")
 class AgentRuntime:
     """Drives a compiled agent graph over checkpointed threads (sessions)."""
 
-    def __init__(self, graph: CompiledStateGraph, loaded: LoadedAgent, broker: Any = None):
+    def __init__(
+        self, graph: CompiledStateGraph, loaded: LoadedAgent, broker: Any = None
+    ):
         self._graph = graph
         self._loaded = loaded
         # The credential broker every caller's principal resolves through (§5.7).
@@ -97,7 +100,9 @@ class AgentRuntime:
         state = await self._graph.aget_state(self._config(session_id))
         return {
             "session_id": session_id,
-            "messages": [_serialize_message(m) for m in state.values.get("messages", [])],
+            "messages": [
+                _serialize_message(m) for m in state.values.get("messages", [])
+            ],
             "next": list(state.next),
             "interrupts": self._collect_interrupts(state),
         }

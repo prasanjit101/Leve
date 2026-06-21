@@ -28,7 +28,9 @@ def test_postgres_url_from_env(tmp_path, monkeypatch):
 
 
 def test_tracing_parsed(tmp_path):
-    (tmp_path / "leve.toml").write_text('[tracing]\nprovider = "langsmith"\nproject = "p"\n')
+    (tmp_path / "leve.toml").write_text(
+        '[tracing]\nprovider = "langsmith"\nproject = "p"\n'
+    )
     config = load_config(tmp_path)
     assert config.tracing.project == "p"
 
@@ -38,7 +40,8 @@ def test_configure_tracing_enables_langsmith(monkeypatch):
     monkeypatch.delenv("LANGSMITH_TRACING", raising=False)
     monkeypatch.delenv("LANGSMITH_PROJECT", raising=False)
     config = LeveConfig(
-        project_dir=Path("."), tracing=TracingConfig(provider="langsmith", project="proj")
+        project_dir=Path("."),
+        tracing=TracingConfig(provider="langsmith", project="proj"),
     )
     configure_tracing(config)
     assert os.environ["LANGSMITH_TRACING"] == "true"
@@ -48,7 +51,9 @@ def test_configure_tracing_enables_langsmith(monkeypatch):
 def test_configure_tracing_noop_without_api_key(monkeypatch):
     monkeypatch.delenv("LANGSMITH_API_KEY", raising=False)
     monkeypatch.delenv("LANGSMITH_TRACING", raising=False)
-    config = LeveConfig(project_dir=Path("."), tracing=TracingConfig(provider="langsmith"))
+    config = LeveConfig(
+        project_dir=Path("."), tracing=TracingConfig(provider="langsmith")
+    )
     configure_tracing(config)
     assert "LANGSMITH_TRACING" not in os.environ
 
@@ -57,7 +62,9 @@ def test_configure_tracing_otel_enables_master_switch(monkeypatch):
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318")
     monkeypatch.delenv("LANGSMITH_TRACING", raising=False)
     monkeypatch.delenv("LANGSMITH_OTEL_ENABLED", raising=False)
-    config = LeveConfig(project_dir=Path("."), tracing=TracingConfig(provider="otel", project="p"))
+    config = LeveConfig(
+        project_dir=Path("."), tracing=TracingConfig(provider="otel", project="p")
+    )
     configure_tracing(config)
     # OTEL must turn tracing ON (the master switch), not just select export mode.
     assert os.environ["LANGSMITH_TRACING"] == "true"

@@ -54,7 +54,9 @@ def parse_skill(path: Path) -> SkillSpec:
     if not description:
         raise LoaderError(f"Skill {path} frontmatter must include a 'description'.")
 
-    return SkillSpec(name=path.stem, description=description, body=match.group(2).strip())
+    return SkillSpec(
+        name=path.stem, description=description, body=match.group(2).strip()
+    )
 
 
 def make_load_skill_tool(skills: tuple[SkillSpec, ...]) -> StructuredTool:

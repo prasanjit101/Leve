@@ -9,7 +9,8 @@ public API precisely so users can test *their* agents the same way.
 
 from __future__ import annotations
 
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage
@@ -36,7 +37,7 @@ class FakeChatModel(BaseChatModel):
 
         return self._calls
 
-    def bind_tools(self, tools: Sequence[Any], **kwargs: Any) -> "FakeChatModel":
+    def bind_tools(self, tools: Sequence[Any], **kwargs: Any) -> FakeChatModel:
         # Tool binding is a no-op: scripted responses already encode tool calls.
         return self
 

@@ -27,7 +27,7 @@ provider = "langsmith"
 project = "{name}"
 """
 
-_AGENT_PY = '''\
+_AGENT_PY = """\
 from leve import define_agent
 
 # The model + config the agent runs on. Capabilities (tools, skills, …) are
@@ -35,7 +35,7 @@ from leve import define_agent
 agent = define_agent(
     model="{model}",
 )
-'''
+"""
 
 _INSTRUCTIONS_MD = """\
 You are a helpful assistant built with Leve.
@@ -43,7 +43,7 @@ You are a helpful assistant built with Leve.
 Today is {{{{ current_date }}}}. Be concise and cite the tools you used.
 """
 
-_EXAMPLE_TOOL = '''\
+_EXAMPLE_TOOL = """\
 from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field
@@ -64,7 +64,7 @@ class CurrentTimeInput(BaseModel):
 )
 async def current_time(timezone_name: str = "UTC") -> str:
     return datetime.now(timezone.utc).isoformat()
-'''
+"""
 
 _EXAMPLE_SKILL = """\
 ---
@@ -110,21 +110,21 @@ ANTHROPIC_API_KEY=
 """
 
 
-_SLACK_CHANNEL = '''\
+_SLACK_CHANNEL = """\
 from leve.channels import define_channel
 from leve.channels.slack import slack_adapter
 
 channel = define_channel(slack_adapter(signing_secret_env="SLACK_SIGNING_SECRET"))
-'''
+"""
 
-_DISCORD_CHANNEL = '''\
+_DISCORD_CHANNEL = """\
 from leve.channels import define_channel
 from leve.channels.discord import discord_adapter
 
 channel = define_channel(discord_adapter(public_key_env="DISCORD_PUBLIC_KEY"))
-'''
+"""
 
-_MCP_CONNECTION = '''\
+_MCP_CONNECTION = """\
 from leve.connections import define_mcp_connection
 
 connection = define_mcp_connection(
@@ -132,7 +132,7 @@ connection = define_mcp_connection(
     transport="sse",
     description="Describe what this connection exposes.",
 )
-'''
+"""
 
 _CHANNEL_TEMPLATES = {"slack": _SLACK_CHANNEL, "discord": _DISCORD_CHANNEL}
 
@@ -142,7 +142,9 @@ def scaffold_channel(agent_dir: Path, kind: str) -> Path:
 
     template = _CHANNEL_TEMPLATES.get(kind)
     if template is None:
-        raise LeveError(f"Unknown channel '{kind}'. Available: {sorted(_CHANNEL_TEMPLATES)}.")
+        raise LeveError(
+            f"Unknown channel '{kind}'. Available: {sorted(_CHANNEL_TEMPLATES)}."
+        )
     return _write_component(agent_dir / "channels" / f"{kind}.py", template)
 
 

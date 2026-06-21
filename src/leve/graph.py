@@ -15,7 +15,7 @@ each milestone extends without changing this assembly's shape:
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
@@ -24,11 +24,10 @@ from langchain.agents.middleware import (
     SummarizationMiddleware,
 )
 from langchain.chat_models import init_chat_model
+from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.store.base import BaseStore
-
-from langchain_core.tools import BaseTool
 
 from leve.agent import CompactionConfig
 from leve.instructions import make_prompt_middleware
@@ -38,7 +37,6 @@ from leve.models import build_model
 from leve.runtime import LeveContext
 from leve.skills import make_load_skill_tool
 from leve.subagents import make_delegation_tool
-
 
 # Resolves the runtime-discovered tools (connection + sandbox tools) for a given
 # agent node. Supplied by the async app layer, since discovery is async and the
@@ -152,7 +150,9 @@ def _build_middleware(loaded: LoadedAgent, model) -> list[AgentMiddleware]:
 _FALLBACK_SUMMARY_TOKENS = 100_000
 
 
-def _build_summarization(compaction: CompactionConfig, model) -> SummarizationMiddleware:
+def _build_summarization(
+    compaction: CompactionConfig, model
+) -> SummarizationMiddleware:
     """Build summarization, degrading fractional clauses when no profile exists.
 
     Both ``trigger`` and ``keep`` may be fractional, and either fractional clause
@@ -168,7 +168,9 @@ def _build_summarization(compaction: CompactionConfig, model) -> SummarizationMi
         summary_model = init_chat_model(summary_model)
 
     has_profile = _has_token_profile(summary_model)
-    trigger = _degrade_if_fractional(compaction.trigger, has_profile, ("tokens", _FALLBACK_SUMMARY_TOKENS))
+    trigger = _degrade_if_fractional(
+        compaction.trigger, has_profile, ("tokens", _FALLBACK_SUMMARY_TOKENS)
+    )
     keep = _degrade_if_fractional(compaction.keep, has_profile, ("messages", 20))
     return SummarizationMiddleware(model=summary_model, trigger=trigger, keep=keep)
 

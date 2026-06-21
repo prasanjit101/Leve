@@ -12,7 +12,6 @@ import threading
 import time
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 import typer
 
@@ -150,8 +149,10 @@ def deploy() -> None:
         typer.secho(f"Deploy failed: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1) from exc
 
-    typer.secho(f"Emitted deployment artifacts (target: {config.deploy.target}):",
-                fg=typer.colors.GREEN)
+    typer.secho(
+        f"Emitted deployment artifacts (target: {config.deploy.target}):",
+        fg=typer.colors.GREEN,
+    )
     for path in written:
         typer.echo(f"  {path.relative_to(config.project_dir)}")
     for warning in warnings:
@@ -170,7 +171,7 @@ class DevMode(str, Enum):
 def dev(
     host: str = typer.Option("127.0.0.1", help="Bind host."),
     port: int = typer.Option(8000, help="Bind port."),
-    mode: Optional[DevMode] = typer.Option(
+    mode: DevMode | None = typer.Option(
         None,
         "--mode",
         help="tui (default): clean chat, server logs → .leve/dev.log. "
@@ -269,7 +270,9 @@ def _run_tui_mode(config, host: str, port: int) -> None:
     _await_server_start(server, thread, host, port)
 
     if log_path is not None:
-        typer.secho(f"logs → {log_path.relative_to(config.project_dir)}", fg=typer.colors.CYAN)
+        typer.secho(
+            f"logs → {log_path.relative_to(config.project_dir)}", fg=typer.colors.CYAN
+        )
 
     from leve.tui import run_tui
 
@@ -294,7 +297,9 @@ def _await_server_start(server, thread: threading.Thread, host: str, port: int) 
             raise typer.Exit(1)
         if time.monotonic() > deadline:
             server.should_exit = True
-            typer.secho("Server did not start within 15s.", fg=typer.colors.RED, err=True)
+            typer.secho(
+                "Server did not start within 15s.", fg=typer.colors.RED, err=True
+            )
             raise typer.Exit(1)
         time.sleep(0.05)
 

@@ -105,7 +105,9 @@ def write_deploy_artifacts(
 
     if config.deploy.target == "langgraph-platform":
         json_path = project / "langgraph.json"
-        json_path.write_text(json.dumps(langgraph_json(config, loaded), indent=2) + "\n")
+        json_path.write_text(
+            json.dumps(langgraph_json(config, loaded), indent=2) + "\n"
+        )
         written.append(json_path)
         if loaded.channels:
             warnings.append(

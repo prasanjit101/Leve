@@ -10,7 +10,8 @@ message-command interactions are parsed into a session keyed by the channel.
 from __future__ import annotations
 
 import os
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 import httpx
 
@@ -24,7 +25,9 @@ _APPLICATION_COMMAND = 2
 class DiscordAdapter(ChannelAdapter):
     name = "discord"
 
-    def __init__(self, *, public_key_env: str, bot_token_env: str = "DISCORD_BOT_TOKEN"):
+    def __init__(
+        self, *, public_key_env: str, bot_token_env: str = "DISCORD_BOT_TOKEN"
+    ):
         self._public_key_env = public_key_env
         self._bot_token_env = bot_token_env
 
@@ -65,7 +68,10 @@ class DiscordAdapter(ChannelAdapter):
         return IncomingMessage(
             session_key=f"discord:{channel}",
             text=text,
-            target={"channel_id": channel, "application_id": payload.get("application_id")},
+            target={
+                "channel_id": channel,
+                "application_id": payload.get("application_id"),
+            },
         )
 
     async def deliver(self, target: dict[str, Any], text: str) -> None:
@@ -88,7 +94,9 @@ def _option_value(data: dict[str, Any]) -> str | None:
     return None
 
 
-def discord_adapter(*, public_key_env: str, bot_token_env: str = "DISCORD_BOT_TOKEN") -> DiscordAdapter:
+def discord_adapter(
+    *, public_key_env: str, bot_token_env: str = "DISCORD_BOT_TOKEN"
+) -> DiscordAdapter:
     """Build a Discord channel adapter (SPEC §4.7)."""
 
     return DiscordAdapter(public_key_env=public_key_env, bot_token_env=bot_token_env)

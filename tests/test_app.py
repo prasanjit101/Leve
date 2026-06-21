@@ -39,7 +39,9 @@ def test_inspect_project_summary(tmp_path, write_project):
 
 
 def test_scaffold_creates_runnable_layout(tmp_path):
-    created = scaffold_project(tmp_path / "myagent", name="myagent", model="anthropic:x")
+    created = scaffold_project(
+        tmp_path / "myagent", name="myagent", model="anthropic:x"
+    )
     names = {p.name for p in created}
     assert {
         "leve.toml",

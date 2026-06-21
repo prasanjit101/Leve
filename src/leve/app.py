@@ -9,8 +9,9 @@ close the checkpointer/store cleanly.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
-from typing import Any, AsyncIterator
+from typing import Any
 
 from langchain_core.tools import BaseTool
 
@@ -91,7 +92,9 @@ def inspect_project(config: LeveConfig) -> dict[str, Any]:
     build_graph(loaded)
     return {
         "agent": loaded.name,
-        "model": loaded.spec.model if isinstance(loaded.spec.model, str) else "<instance>",
+        "model": loaded.spec.model
+        if isinstance(loaded.spec.model, str)
+        else "<instance>",
         "instructions": bool(loaded.instructions.strip()),
         "tools": [tool.name for tool in loaded.tools],
         "skills": [skill.name for skill in loaded.skills],

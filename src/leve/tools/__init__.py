@@ -14,8 +14,9 @@ gates in M2, principal injection in M5) without the tool author wiring any of it
 from __future__ import annotations
 
 import inspect
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, create_model
@@ -79,10 +80,13 @@ class ToolSpec:
             if isinstance(param.default, InjectedPrincipal)
         ]
 
-    def _wrap_injection(self, injected: list[str], is_async: bool) -> Callable[..., Any]:
+    def _wrap_injection(
+        self, injected: list[str], is_async: bool
+    ) -> Callable[..., Any]:
         func = self.func
 
         if is_async:
+
             async def awrapper(**kwargs: Any) -> Any:
                 for name in injected:
                     kwargs[name] = current_principal()
@@ -104,7 +108,11 @@ class ToolSpec:
         for name, param in inspect.signature(self.func).parameters.items():
             if name in injected or name in ("self", "cls"):
                 continue
-            annotation = param.annotation if param.annotation is not inspect.Parameter.empty else Any
+            annotation = (
+                param.annotation
+                if param.annotation is not inspect.Parameter.empty
+                else Any
+            )
             default = ... if param.default is inspect.Parameter.empty else param.default
             fields[name] = (annotation, default)
         return create_model(f"{self.name}_Input", **fields)

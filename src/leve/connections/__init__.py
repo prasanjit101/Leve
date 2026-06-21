@@ -13,8 +13,9 @@ namespacing work; a connection with a static token resolves it here.
 from __future__ import annotations
 
 import inspect
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from langchain_core.tools import BaseTool
 
@@ -136,7 +137,9 @@ def _discover_openapi(spec: ConnectionSpec, principal: Any) -> list[BaseTool]:
     ]
 
 
-async def _resolve_headers(auth: dict[str, Any] | None, principal: Any) -> dict[str, str] | None:
+async def _resolve_headers(
+    auth: dict[str, Any] | None, principal: Any
+) -> dict[str, str] | None:
     """Resolve auth into request headers for ``principal``.
 
     Supports a custom ``get_token(principal)`` callable (may be sync or async) and
@@ -162,7 +165,9 @@ async def _resolve_headers(auth: dict[str, Any] | None, principal: Any) -> dict[
     return {"Authorization": f"Bearer {token}"} if token else None
 
 
-async def _resolve_headers_safe(auth: dict[str, Any] | None, principal: Any) -> dict[str, str] | None:
+async def _resolve_headers_safe(
+    auth: dict[str, Any] | None, principal: Any
+) -> dict[str, str] | None:
     """Build-time header resolution that fails *closed* instead of crashing.
 
     At build there is no caller (``principal`` is ``None``), so a per-caller

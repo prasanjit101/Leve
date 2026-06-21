@@ -10,9 +10,10 @@ an *injected* argument the model cannot read or forge.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from leve.credentials import CredentialBroker
@@ -38,7 +39,7 @@ class Principal:
     subject: str
     tenant: str | None = None
     claims: Mapping[str, Any] = field(default_factory=dict)
-    broker: "CredentialBroker | None" = field(default=None, repr=False)
+    broker: CredentialBroker | None = field(default=None, repr=False)
     # Secret material (e.g. pre-exchanged downstream tokens) kept OUT of `claims`
     # and hidden from repr/tracing so it can't leak into logs or model state.
     secrets: Mapping[str, Any] = field(default_factory=dict, repr=False)
@@ -52,7 +53,7 @@ class Principal:
             )
         return await self.broker.resolve(self, audience)
 
-    def narrow(self, *, claims: Mapping[str, Any] | None = None) -> "Principal":
+    def narrow(self, *, claims: Mapping[str, Any] | None = None) -> Principal:
         """Return a principal with a *subset* of claims (delegation can only narrow).
 
         A claim value can only shrink, never grow: requested values are intersected
@@ -68,7 +69,9 @@ class Principal:
             if key not in self.claims:
                 continue  # cannot introduce a new claim
             held = self.claims[key]
-            if isinstance(held, (list, tuple, set)) and isinstance(requested, (list, tuple, set)):
+            if isinstance(held, (list, tuple, set)) and isinstance(
+                requested, (list, tuple, set)
+            ):
                 allowed = set(requested)
                 kept[key] = [item for item in held if item in allowed]  # shrink only
             elif requested == held:
@@ -89,7 +92,9 @@ def anonymous() -> Principal:
     return Principal(subject="anonymous", tenant=None, claims={})
 
 
-def with_broker(principal: "Principal | None", broker: "CredentialBroker | None") -> "Principal | None":
+def with_broker(
+    principal: Principal | None, broker: CredentialBroker | None
+) -> Principal | None:
     """Attach a credential broker to a principal (no-op if either is missing)."""
 
     from dataclasses import replace
@@ -99,12 +104,21 @@ def with_broker(principal: "Principal | None", broker: "CredentialBroker | None"
     return replace(principal, broker=broker)
 
 
-def app_principal(subject: str = "app", *, tenant: str | None = None, scopes: tuple[str, ...] = (),
-                  broker: "CredentialBroker | None" = None) -> Principal:
+def app_principal(
+    subject: str = "app",
+    *,
+    tenant: str | None = None,
+    scopes: tuple[str, ...] = (),
+    broker: CredentialBroker | None = None,
+) -> Principal:
     """An explicit, auditable service identity for scheduled/non-interactive runs (SPEC §5.6)."""
 
-    return Principal(subject=subject, tenant=tenant, claims={"scopes": list(scopes), "app": True},
-                     broker=broker)
+    return Principal(
+        subject=subject,
+        tenant=tenant,
+        claims={"scopes": list(scopes), "app": True},
+        broker=broker,
+    )
 
 
 class InjectedPrincipal:
@@ -119,7 +133,9 @@ class InjectedPrincipal:
 # The principal for the in-flight tool call, set by PrincipalMiddleware from the
 # run's runtime context and read by injected-principal tools. A ContextVar keeps
 # it correct under concurrency (each task sees its own value).
-_current_principal: ContextVar[Principal | None] = ContextVar("leve_principal", default=None)
+_current_principal: ContextVar[Principal | None] = ContextVar(
+    "leve_principal", default=None
+)
 
 
 def set_current_principal(principal: Principal | None):

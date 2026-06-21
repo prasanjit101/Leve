@@ -13,8 +13,9 @@ core surface (Open/Closed).
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from leve.auth import Principal
@@ -29,7 +30,7 @@ class IncomingMessage:
     target: dict[str, Any] = field(default_factory=dict)  # where to deliver the reply
     # The authenticated caller behind this message (SPEC §5.6). The adapter builds
     # it from the surface's verified identity; the broker is attached downstream.
-    principal: "Principal | None" = None
+    principal: Principal | None = None
 
 
 class ChannelAdapter(ABC):

@@ -26,12 +26,30 @@ from leve.errors import ConfigError
 # Provider presets: authorize/token endpoints + default scopes (SPEC §5.7).
 # You supply only client_id / client_secret via env; the rest comes from here.
 PROVIDER_PRESETS: dict[str, dict] = {
-    "slack": {"authorize": "https://slack.com/oauth/v2/authorize", "token": "https://slack.com/api/oauth.v2.access"},
-    "github": {"authorize": "https://github.com/login/oauth/authorize", "token": "https://github.com/login/oauth/access_token"},
-    "google": {"authorize": "https://accounts.google.com/o/oauth2/v2/auth", "token": "https://oauth2.googleapis.com/token"},
-    "linear": {"authorize": "https://linear.app/oauth/authorize", "token": "https://api.linear.app/oauth/token"},
-    "notion": {"authorize": "https://api.notion.com/v1/oauth/authorize", "token": "https://api.notion.com/v1/oauth/token"},
-    "salesforce": {"authorize": "https://login.salesforce.com/services/oauth2/authorize", "token": "https://login.salesforce.com/services/oauth2/token"},
+    "slack": {
+        "authorize": "https://slack.com/oauth/v2/authorize",
+        "token": "https://slack.com/api/oauth.v2.access",
+    },
+    "github": {
+        "authorize": "https://github.com/login/oauth/authorize",
+        "token": "https://github.com/login/oauth/access_token",
+    },
+    "google": {
+        "authorize": "https://accounts.google.com/o/oauth2/v2/auth",
+        "token": "https://oauth2.googleapis.com/token",
+    },
+    "linear": {
+        "authorize": "https://linear.app/oauth/authorize",
+        "token": "https://api.linear.app/oauth/token",
+    },
+    "notion": {
+        "authorize": "https://api.notion.com/v1/oauth/authorize",
+        "token": "https://api.notion.com/v1/oauth/token",
+    },
+    "salesforce": {
+        "authorize": "https://login.salesforce.com/services/oauth2/authorize",
+        "token": "https://login.salesforce.com/services/oauth2/token",
+    },
     "snowflake": {"authorize": "", "token": ""},
 }
 
@@ -82,7 +100,7 @@ class OAuthStoreBroker(CredentialBroker):
     succeeds on the resumed run.
     """
 
-    def __init__(self, store: "dict | None" = None):
+    def __init__(self, store: dict | None = None):
         # key: (tenant, subject, provider) -> token. Swap for a Postgres-backed
         # store in production; the interface is what matters here.
         self._tokens: dict[tuple, str] = store if store is not None else {}
@@ -114,9 +132,7 @@ class TokenExchangeBroker(CredentialBroker):
         # repr-visible authorization data, not secret material).
         token = (principal.secrets.get("audience_tokens") or {}).get(audience)
         if token is None:
-            raise PermissionError(
-                f"No exchangeable token for audience '{audience}'."
-            )
+            raise PermissionError(f"No exchangeable token for audience '{audience}'.")
         return Credential(token=token)
 
 

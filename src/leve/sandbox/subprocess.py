@@ -46,7 +46,7 @@ class SubprocessSandbox(Sandbox):
             stdout, stderr = await asyncio.wait_for(
                 proc.communicate(), timeout=self._limits.timeout_sec
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             proc.kill()
             await proc.wait()
             return SandboxResult(

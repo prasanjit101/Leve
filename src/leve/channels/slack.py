@@ -13,7 +13,8 @@ import hashlib
 import hmac
 import os
 import time
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 import httpx
 
@@ -26,7 +27,9 @@ _REPLAY_WINDOW_SEC = 60 * 5
 class SlackAdapter(ChannelAdapter):
     name = "slack"
 
-    def __init__(self, *, signing_secret_env: str, bot_token_env: str = "SLACK_BOT_TOKEN"):
+    def __init__(
+        self, *, signing_secret_env: str, bot_token_env: str = "SLACK_BOT_TOKEN"
+    ):
         self._signing_secret_env = signing_secret_env
         self._bot_token_env = bot_token_env
 
@@ -91,7 +94,11 @@ class SlackAdapter(ChannelAdapter):
             )
 
 
-def slack_adapter(*, signing_secret_env: str, bot_token_env: str = "SLACK_BOT_TOKEN") -> SlackAdapter:
+def slack_adapter(
+    *, signing_secret_env: str, bot_token_env: str = "SLACK_BOT_TOKEN"
+) -> SlackAdapter:
     """Build a Slack channel adapter (SPEC §4.7)."""
 
-    return SlackAdapter(signing_secret_env=signing_secret_env, bot_token_env=bot_token_env)
+    return SlackAdapter(
+        signing_secret_env=signing_secret_env, bot_token_env=bot_token_env
+    )

@@ -6,7 +6,9 @@ from leve.instructions import render_instructions
 
 
 def test_substitutes_known_placeholders():
-    out = render_instructions("Hello {{ name }}, day {{ day }}.", {"name": "Ada", "day": 1})
+    out = render_instructions(
+        "Hello {{ name }}, day {{ day }}.", {"name": "Ada", "day": 1}
+    )
     assert out == "Hello Ada, day 1."
 
 

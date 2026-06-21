@@ -13,8 +13,9 @@ crontab/APScheduler entry that hits the schedule endpoint (see ``leve.deploy``).
 from __future__ import annotations
 
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Awaitable, Callable
+from typing import TYPE_CHECKING, Any
 
 from leve.errors import LoaderError
 
@@ -29,7 +30,7 @@ class ScheduleSpec:
 
     name: str
     cron: str
-    func: Callable[["ScheduleContext"], Awaitable[None]]
+    func: Callable[[ScheduleContext], Awaitable[None]]
 
 
 def define_schedule(*, cron: str, name: str | None = None):
@@ -37,7 +38,7 @@ def define_schedule(*, cron: str, name: str | None = None):
 
     _validate_cron(cron)
 
-    def wrap(func: Callable[["ScheduleContext"], Awaitable[None]]) -> ScheduleSpec:
+    def wrap(func: Callable[[ScheduleContext], Awaitable[None]]) -> ScheduleSpec:
         return ScheduleSpec(name=name or func.__name__, cron=cron, func=func)
 
     return wrap
@@ -46,7 +47,7 @@ def define_schedule(*, cron: str, name: str | None = None):
 class ScheduleContext:
     """The ``ctx`` handed to a schedule handler."""
 
-    def __init__(self, name: str, runtime: "AgentRuntime", app_auth: Any = None):
+    def __init__(self, name: str, runtime: AgentRuntime, app_auth: Any = None):
         self._name = name
         self._runtime = runtime
         # The app principal a scheduled run executes under (M5). Carried here so
@@ -55,7 +56,7 @@ class ScheduleContext:
 
     async def receive(
         self,
-        channel: "ChannelSpec | None" = None,
+        channel: ChannelSpec | None = None,
         *,
         message: str,
         target: dict[str, Any] | None = None,
@@ -71,7 +72,8 @@ class ScheduleContext:
         # user's permissions (SPEC §5.6).
         context = LeveContext(principal=auth or self.app_auth)
         events = [
-            event async for event in self._runtime.run(session_key, message, context=context)
+            event
+            async for event in self._runtime.run(session_key, message, context=context)
         ]
         reply = extract_reply(events)
         if channel is not None:
@@ -80,7 +82,7 @@ class ScheduleContext:
 
 
 async def run_schedule(
-    spec: ScheduleSpec, runtime: "AgentRuntime", *, app_auth: Any = None
+    spec: ScheduleSpec, runtime: AgentRuntime, *, app_auth: Any = None
 ) -> None:
     """Execute a schedule's handler once under an app principal."""
 

@@ -49,16 +49,20 @@ def test_log_config_routes_uvicorn_to_rotating_file(tmp_path):
 def test_run_split_returns_false_without_tmux(tmp_path):
     run_client = MagicMock()
     with patch("leve.devlog.shutil.which", return_value=None):
-        assert run_split(_config(tmp_path), "127.0.0.1", 8000, run_client=run_client) is False
+        assert (
+            run_split(_config(tmp_path), "127.0.0.1", 8000, run_client=run_client)
+            is False
+        )
     run_client.assert_not_called()
 
 
 def test_run_split_inside_tmux_splits_and_runs_client(tmp_path, monkeypatch):
     monkeypatch.setenv("TMUX", "/tmp/tmux-sock")
     run_client = MagicMock()
-    with patch("leve.devlog.shutil.which", return_value="/usr/bin/tmux"), patch(
-        "leve.devlog.subprocess.run"
-    ) as sub:
+    with (
+        patch("leve.devlog.shutil.which", return_value="/usr/bin/tmux"),
+        patch("leve.devlog.subprocess.run") as sub,
+    ):
         result = run_split(_config(tmp_path), "127.0.0.1", 8000, run_client=run_client)
 
     assert result is True
@@ -72,9 +76,10 @@ def test_run_split_inside_tmux_splits_and_runs_client(tmp_path, monkeypatch):
 def test_run_split_outside_tmux_creates_session(tmp_path, monkeypatch):
     monkeypatch.delenv("TMUX", raising=False)
     run_client = MagicMock()
-    with patch("leve.devlog.shutil.which", return_value="/usr/bin/tmux"), patch(
-        "leve.devlog.subprocess.run"
-    ) as sub:
+    with (
+        patch("leve.devlog.shutil.which", return_value="/usr/bin/tmux"),
+        patch("leve.devlog.subprocess.run") as sub,
+    ):
         result = run_split(_config(tmp_path), "127.0.0.1", 8000, run_client=run_client)
 
     assert result is True
@@ -139,9 +144,12 @@ def test_dev_no_tui_with_mode_is_an_error():
 
 def test_dev_split_falls_back_to_tui_without_tmux():
     load, server, tui = _patch_dispatch()
-    with load, server, tui as cli_tui, patch(
-        "leve.devlog.run_split", return_value=False
-    ) as split:
+    with (
+        load,
+        server,
+        tui as cli_tui,
+        patch("leve.devlog.run_split", return_value=False) as split,
+    ):
         result = runner.invoke(app, ["dev", "--mode", "split"])
     assert result.exit_code == 0
     split.assert_called_once()

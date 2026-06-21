@@ -52,7 +52,7 @@ class MicrosandboxSandbox(Sandbox):
                 sandbox.command.run("sh", ["-c", command]),
                 timeout=self._limits.timeout_sec,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return SandboxResult(
                 stdout="",
                 stderr=f"Command timed out after {self._limits.timeout_sec}s.",
@@ -72,7 +72,9 @@ class MicrosandboxSandbox(Sandbox):
         import shlex
 
         delimiter = f"LEVE_EOF_{uuid.uuid4().hex}"
-        await self.run(f"cat > {shlex.quote(path)} <<'{delimiter}'\n{content}\n{delimiter}")
+        await self.run(
+            f"cat > {shlex.quote(path)} <<'{delimiter}'\n{content}\n{delimiter}"
+        )
 
     async def read_file(self, path: str) -> str:  # pragma: no cover
         import shlex

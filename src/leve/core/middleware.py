@@ -110,7 +110,7 @@ class PrincipalMiddleware(AgentMiddleware):
 
     Reads the principal from the run's runtime context (never model state) and
     publishes it on a context variable that injected-principal tools read. Also
-    turns a :class:`~leve.credentials.NeedsConsent` raised by a broker into a
+    turns a :class:`~leve.security.credentials.NeedsConsent` raised by a broker into a
     consent interrupt, so authorization reuses the human-in-the-loop pause (§5.7).
     """
 

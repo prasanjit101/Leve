@@ -10,15 +10,7 @@ import sys
 
 import leve.serving.cli as _serving_cli  # noqa: E402
 
-# Re-export all public symbols for static analysers / ``from leve.cli import X``
-from leve.serving.cli import *  # noqa: F401,F403
-from leve.serving.cli import (  # noqa: F401  explicit public re-exports
-    app,
-    channels_app,
-    connections_app,
-    _run_server_mode,  # noqa: F401  private symbol kept for tests/test_devlog.py
-    _run_tui_mode,  # noqa: F401  private symbol kept for tests/test_devlog.py
-)
-
-# Alias this module to the canonical one so patches on ``leve.cli.*`` propagate.
+# Alias this module to the canonical one so ``from leve.cli import X`` resolves
+# every symbol (public and private) and ``patch("leve.cli.*")`` mutates the same
+# namespace the live commands read from. The canonical module IS leve.cli.
 sys.modules[__name__] = _serving_cli

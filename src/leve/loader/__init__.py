@@ -9,7 +9,7 @@ changing the steps that already exist (Open/Closed).
 Loading is split in two so discovery stays pure and runtime concerns stay out:
 
 * :func:`load_agent` → an inert :class:`LoadedAgent` (spec + instructions + tools).
-* ``leve.graph.build_graph`` → the compiled ``StateGraph`` (needs the
+* ``leve.core.graph.build_graph`` → the compiled ``StateGraph`` (needs the
   checkpointer/store, which are runtime-managed).
 """
 
@@ -18,14 +18,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
-from leve.agent import AgentSpec
 from leve.channels import ChannelSpec
 from leve.config import LeveConfig
 from leve.connections import ConnectionSpec
+from leve.core.agent import AgentSpec
+from leve.core.skills import SkillSpec, parse_skill
 from leve.errors import LoaderError
 from leve.loader import discovery
 from leve.schedules import ScheduleSpec
-from leve.skills import SkillSpec, parse_skill
 from leve.tools import ToolSpec
 
 

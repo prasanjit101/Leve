@@ -123,7 +123,7 @@ def _discover_openapi(spec: ConnectionSpec, principal: Any) -> list[BaseTool]:
     # OpenAPI tools resolve headers per call from the live caller principal
     # (true per-caller credentials, SPEC §5.6) rather than baking one token.
     async def headers_provider() -> dict[str, str] | None:
-        from leve.auth import current_principal
+        from leve.security.auth import current_principal
 
         return await _resolve_headers(spec.auth, current_principal())
 
@@ -144,7 +144,7 @@ async def _resolve_headers(
 
     Supports a custom ``get_token(principal)`` callable (may be sync or async) and
     the declarative ``{"broker", "provider"}`` form, which resolves through the
-    caller's :class:`~leve.auth.Principal` credential broker. Returns ``None`` (no
+    caller's :class:`~leve.security.auth.Principal` credential broker. Returns ``None`` (no
     header — fail closed) when no credential can be resolved, never a forged one.
     """
 

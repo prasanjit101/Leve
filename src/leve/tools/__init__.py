@@ -21,7 +21,7 @@ from typing import Any
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, create_model
 
-from leve.auth import InjectedPrincipal, current_principal
+from leve.security.auth import InjectedPrincipal, current_principal
 
 
 @dataclass(frozen=True)
@@ -42,7 +42,7 @@ class ToolSpec:
     def build(self) -> StructuredTool:
         """Compile this spec into a LangChain ``StructuredTool``.
 
-        Parameters defaulted with :class:`~leve.auth.InjectedPrincipal` are
+        Parameters defaulted with :class:`~leve.security.auth.InjectedPrincipal` are
         stripped from the model-facing schema and filled from the trusted runtime
         context at execution — the model never sees or sets them (SPEC §5.6).
         """

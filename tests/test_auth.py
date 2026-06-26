@@ -6,13 +6,13 @@ import pytest
 from langchain_core.messages import AIMessage
 from pydantic import BaseModel
 
-from leve.auth import (
+from leve.security.auth import (
     InjectedPrincipal,
     Principal,
     app_principal,
     with_broker,
 )
-from leve.credentials import (
+from leve.security.credentials import (
     NeedsConsent,
     OAuthStoreBroker,
     StaticBroker,
@@ -134,7 +134,7 @@ def test_injected_principal_stripped_from_schema():
 
 
 async def test_tool_receives_injected_principal(make_loaded):
-    from leve.runtime import LeveContext
+    from leve.core.runtime import LeveContext
     from leve.testing import FakeChatModel
 
     model = FakeChatModel(
@@ -161,7 +161,7 @@ async def test_tool_receives_injected_principal(make_loaded):
 
 
 async def test_consent_interrupt_then_resume(make_loaded):
-    from leve.runtime import LeveContext
+    from leve.core.runtime import LeveContext
     from leve.testing import FakeChatModel
 
     broker = OAuthStoreBroker()
@@ -200,9 +200,9 @@ async def test_consent_interrupt_then_resume(make_loaded):
 async def test_subagent_inherits_parent_principal(make_loaded):
     from pathlib import Path
 
-    from leve.agent import define_agent
+    from leve.core.agent import define_agent
+    from leve.core.runtime import LeveContext
     from leve.loader import LoadedAgent
-    from leve.runtime import LeveContext
     from leve.testing import FakeChatModel
 
     seen: list = []

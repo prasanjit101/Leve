@@ -6,8 +6,8 @@ from pathlib import Path
 
 from langchain.agents.middleware import SummarizationMiddleware
 
-from leve.agent import CompactionConfig, define_agent
-from leve.graph import _build_middleware
+from leve.core.agent import CompactionConfig, define_agent
+from leve.core.graph import _build_middleware
 from leve.loader import LoadedAgent
 from leve.testing import FakeChatModel
 

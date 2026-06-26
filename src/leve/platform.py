@@ -18,13 +18,13 @@ from typing import Any
 def __getattr__(name: str) -> Any:
     if name == "app":
         from leve.config import load_config
-        from leve.server import create_app
+        from leve.serving.server import create_app
 
         return create_app(load_config())
 
     if name == "graph":
         from leve.config import load_config
-        from leve.graph import build_graph
+        from leve.core.graph import build_graph
         from leve.loader import load_project
 
         config = load_config()

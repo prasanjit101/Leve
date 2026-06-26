@@ -8,12 +8,12 @@ from pathlib import Path
 import pytest
 from langchain_core.messages import AIMessage
 
-from leve.agent import define_agent
-from leve.app import _resolve_extra_tools
 from leve.config import LeveConfig, SandboxConfig
+from leve.core.agent import define_agent
+from leve.core.graph import build_graph
 from leve.errors import LoaderError
-from leve.graph import build_graph
 from leve.loader import LoadedAgent
+from leve.serving.app import _resolve_extra_tools
 from leve.testing import FakeChatModel
 from leve.tools import define_tool
 from tests.conftest import collect, runtime_for

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from leve.app import inspect_project
 from leve.errors import LeveError
 from leve.scaffold import scaffold_project
+from leve.serving.app import inspect_project
 
 AGENT_PY = """\
 from leve import define_agent

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from leve.events import EventNormalizer
+from leve.serving.events import EventNormalizer
 
 
 def _chunk(text: str) -> SimpleNamespace:

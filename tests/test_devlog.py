@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
-from leve.cli import app
 from leve.devlog import configure_dev_logging, dev_log_path, run_split
+from leve.serving.cli import app
 
 runner = CliRunner()
 
@@ -101,9 +101,9 @@ def _patch_dispatch():
     """Patch config loading and the three mode runners for dispatch tests."""
 
     return (
-        patch("leve.cli.load_config", return_value=MagicMock()),
-        patch("leve.cli._run_server_mode"),
-        patch("leve.cli._run_tui_mode"),
+        patch("leve.serving.cli.load_config", return_value=MagicMock()),
+        patch("leve.serving.cli._run_server_mode"),
+        patch("leve.serving.cli._run_tui_mode"),
     )
 
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from leve.instructions import render_instructions
+from leve.core.instructions import render_instructions
 
 
 def test_substitutes_known_placeholders():

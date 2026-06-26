@@ -58,7 +58,7 @@ async def test_run_schedule_drives_runtime_and_delivers(make_loaded):
 async def test_schedule_runs_under_app_principal(make_loaded):
     from langchain_core.messages import AIMessage
 
-    from leve.auth import InjectedPrincipal, Principal
+    from leve.security.auth import InjectedPrincipal, Principal
     from leve.tools import define_tool
 
     seen: list = []

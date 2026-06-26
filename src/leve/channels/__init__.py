@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from leve.auth import Principal
+    from leve.security.auth import Principal
 
 
 @dataclass(frozen=True)

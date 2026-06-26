@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 import httpx
 
-from leve.server import API_PREFIX, SessionManager, create_app
+from leve.serving.server import API_PREFIX, SessionManager, create_app
 
 AGENT_PY = """\
 from leve import define_agent

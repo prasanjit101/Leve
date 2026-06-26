@@ -21,7 +21,7 @@ from leve.errors import LoaderError
 
 if TYPE_CHECKING:  # avoid a runtime import cycle (session → loader → …)
     from leve.channels import ChannelSpec
-    from leve.session import AgentRuntime
+    from leve.serving.session import AgentRuntime
 
 
 @dataclass(frozen=True)
@@ -64,8 +64,8 @@ class ScheduleContext:
     ) -> str:
         """Start a fresh session, run the message, and deliver any reply."""
 
-        from leve.runtime import LeveContext
-        from leve.session import extract_reply
+        from leve.core.runtime import LeveContext
+        from leve.serving.session import extract_reply
 
         session_key = f"schedule:{self._name}:{uuid.uuid4().hex}"
         # Scheduled runs carry an explicit, auditable app principal — never a
@@ -86,7 +86,7 @@ async def run_schedule(
 ) -> None:
     """Execute a schedule's handler once under an app principal."""
 
-    from leve.auth import app_principal, with_broker
+    from leve.security.auth import app_principal, with_broker
 
     # Default to a service identity (with the broker attached) so scheduled tool
     # calls have an explicit, auditable principal rather than none.

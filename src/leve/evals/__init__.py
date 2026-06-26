@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from leve.evals.expect import Matcher
-from leve.session import AgentRuntime, extract_reply
+from leve.serving.session import AgentRuntime, extract_reply
 
 __all__ = ["EvalContext", "EvalSpec", "EvalResult", "define_eval", "run_eval"]
 

@@ -71,7 +71,7 @@ def test_slack_handshake_and_parse():
 
 async def test_channel_turn_runs_and_delivers(make_loaded):
     from leve.channels import IncomingMessage
-    from leve.server import SessionManager
+    from leve.serving.server import SessionManager
     from leve.testing import FakeChatModel
     from tests.conftest import runtime_for
 
@@ -96,7 +96,7 @@ def test_schedule_secret_enforced(monkeypatch):
     import pytest
     from fastapi import HTTPException
 
-    from leve.server import _verify_schedule_secret
+    from leve.serving.server import _verify_schedule_secret
 
     class _Req:
         def __init__(self, headers):

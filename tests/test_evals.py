@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from leve.app import run_evals
+from leve.serving.app import run_evals
 
 AGENT_PY = """\
 from leve import define_agent

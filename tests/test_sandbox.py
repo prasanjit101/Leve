@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import pytest
 
-from leve.app import build_runtime
 from leve.config import SandboxConfig, SandboxLimits
 from leve.errors import ConfigError
 from leve.sandbox import create_sandbox, make_sandbox_tools
 from leve.sandbox.subprocess import SubprocessSandbox
+from leve.serving.app import build_runtime
 from tests.conftest import collect
 
 SANDBOX_TOML = """\

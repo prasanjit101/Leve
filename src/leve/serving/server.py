@@ -1,6 +1,6 @@
 """HTTP API (SPEC §9).
 
-A thin FastAPI layer over :class:`~leve.session.AgentRuntime`. The session model
+A thin FastAPI layer over :class:`~leve.serving.session.AgentRuntime`. The session model
 separates *sending* from *streaming*: a message kicks off a turn whose events are
 published to a per-session :class:`SessionBroker`; the POST response body *is*
 the live SSE stream of that turn, and ``GET …/stream`` lets a second client

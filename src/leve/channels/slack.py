@@ -18,8 +18,8 @@ from typing import Any
 
 import httpx
 
-from leve.auth import Principal
 from leve.channels import ChannelAdapter, IncomingMessage
+from leve.security.auth import Principal
 
 _REPLAY_WINDOW_SEC = 60 * 5
 

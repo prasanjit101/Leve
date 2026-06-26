@@ -6,7 +6,7 @@ from datetime import date
 
 from langchain_core.messages import AIMessage, SystemMessage
 
-from leve.session import extract_reply
+from leve.serving.session import extract_reply
 from leve.testing import FakeChatModel
 from tests.conftest import collect, runtime_for
 

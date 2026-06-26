@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from leve.agent import define_agent
 from leve.channels import ChannelSpec
 from leve.config import DeployConfig, LeveConfig, PersistenceConfig, SandboxConfig
+from leve.core.agent import define_agent
 from leve.deploy import crontab, dockerfile, langgraph_json, write_deploy_artifacts
 from leve.loader import LoadedAgent
 from leve.schedules import define_schedule

@@ -9,7 +9,7 @@ each milestone extends without changing this assembly's shape:
 
 * instructions templating → ``dynamic_prompt`` (M1)
 * context compaction → ``SummarizationMiddleware`` (M2)
-* human-in-the-loop approval → :class:`~leve.middleware.ApprovalMiddleware` (M2)
+* human-in-the-loop approval → :class:`~leve.core.middleware.ApprovalMiddleware` (M2)
 * model fallbacks → ``ModelFallbackMiddleware`` (M1)
 """
 

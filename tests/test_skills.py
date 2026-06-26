@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
+from leve.core.skills import SkillSpec, make_load_skill_tool, parse_skill
 from leve.errors import LoaderError
 from leve.loader import load_project
-from leve.skills import SkillSpec, make_load_skill_tool, parse_skill
 
 SKILL = "---\ndescription: How this team defines revenue.\n---\nRevenue is net of refunds.\n"
 

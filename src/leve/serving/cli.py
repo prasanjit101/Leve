@@ -15,9 +15,9 @@ from pathlib import Path
 
 import typer
 
-from leve.serving.app import inspect_project
 from leve.config import load_config
 from leve.errors import LeveError
+from leve.serving.app import inspect_project
 
 app = typer.Typer(
     add_completion=False,

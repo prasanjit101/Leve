@@ -19,9 +19,9 @@ from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 
-from leve.security.auth import Credential, Principal
 from leve.config import CredentialsConfig
 from leve.errors import ConfigError
+from leve.security.auth import Credential, Principal
 
 # Provider presets: authorize/token endpoints + default scopes (SPEC §5.7).
 # You supply only client_id / client_secret via env; the rest comes from here.

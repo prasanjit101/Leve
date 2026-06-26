@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.scripts]
-leve = "leve.cli:app"
+leve = "leve.serving.cli:app"
 
 [project.optional-dependencies]
 # Production Postgres durability (checkpointer + store). Kept optional so the

@@ -31,12 +31,12 @@ from langgraph.store.base import BaseStore
 
 from leve.core.agent import CompactionConfig
 from leve.core.instructions import make_prompt_middleware
-from leve.loader import LoadedAgent
 from leve.core.middleware import ApprovalMiddleware, PrincipalMiddleware
 from leve.core.models import build_model
 from leve.core.runtime import LeveContext
 from leve.core.skills import make_load_skill_tool
 from leve.core.subagents import make_delegation_tool
+from leve.loader import LoadedAgent
 
 # Resolves the runtime-discovered tools (connection + sandbox tools) for a given
 # agent node. Supplied by the async app layer, since discovery is async and the

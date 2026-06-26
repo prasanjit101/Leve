@@ -7,8 +7,8 @@ most projects import directly live here; everything else is reached through the
 convention described in ``SPEC.md``.
 """
 
-from leve.agent import AgentSpec, CompactionConfig, define_agent
-from leve.auth import Credential, Principal
+from leve.core.agent import AgentSpec, CompactionConfig, define_agent
+from leve.security.auth import Credential, Principal
 
 __all__ = [
     "AgentSpec",

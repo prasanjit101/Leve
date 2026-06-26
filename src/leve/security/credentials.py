@@ -1,7 +1,7 @@
 """Credential brokering — the "Connect" equivalent (SPEC §5.7).
 
 A ``CredentialBroker`` turns a ``(principal, audience)`` into a downstream
-:class:`~leve.auth.Credential` without the model ever seeing the secret. Three
+:class:`~leve.security.auth.Credential` without the model ever seeing the secret. Three
 built-ins mirror the spec:
 
 * ``static`` — a fixed secret from the environment (dev / shared service account).

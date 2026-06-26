@@ -1,7 +1,7 @@
 """Platform thread/store auth scoping (SPEC §5.6).
 
 On LangGraph Platform, Leve registers an ``Auth`` handler: ``@auth.authenticate``
-verifies the incoming request and produces a :class:`~leve.auth.Principal`, and
+verifies the incoming request and produces a :class:`~leve.security.auth.Principal`, and
 ``@auth.on`` handlers scope every thread/store/run operation by
 ``(tenant, subject)`` so a user can only touch their own sessions, and a resumed
 session's identity is re-verified rather than trusted from the original request.
